@@ -1,28 +1,6 @@
-[gd_scene load_steps=8 format=3 uid="uid://80sicyclqnqk"]
+[gd_scene load_steps=8 format=3 uid="uid://cp3ve8pc186kd"]
 
-[sub_resource type="GDScript" id="GDScript_3sf60"]
-resource_name = "projectile"
-script/source = "extends RayCast2D
-
-
-@export var speed: float
-@export var damage: int = 10
-
-
-func _physics_process(delta):
-  var d = global_transform.basis_xform(Vector2.RIGHT)
-  var m = speed * delta
-  force_raycast_update()
-  if is_colliding():
-    m = global_position.distance_to(get_collision_point())
-    var c = get_collider()
-    if c.has_method(\"take_damage\"):
-      c.call(\"take_damage\", damage)
-      queue_free()
-      return
-  global_translate(d * m)
-  target_position.x = m + 0.01
-"
+[ext_resource type="Script" path="res://weapons/freeze/projectile_freeze.gd" id="1_1gu7a"]
 
 [sub_resource type="QuadMesh" id="QuadMesh_7gy82"]
 size = Vector2(32, 4)
@@ -58,8 +36,8 @@ collision_mask = 3
 hit_from_inside = true
 collide_with_areas = true
 collide_with_bodies = false
-script = SubResource("GDScript_3sf60")
-speed = 2000.0
+script = ExtResource("1_1gu7a")
+speed = 1200.0
 
 [node name="MeshInstance2D" type="MeshInstance2D" parent="."]
 modulate = Color(1, 0, 0, 1)
