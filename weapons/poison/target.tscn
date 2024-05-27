@@ -1,0 +1,71 @@
+[gd_scene load_steps=7 format=3 uid="uid://ch10gilyjn22a"]
+
+[ext_resource type="Texture2D" uid="uid://ywmr84swid8l" path="res://icon.svg" id="1_3penb"]
+[ext_resource type="Script" path="res://weapons/freeze/stats.gd" id="2_hvsmw"]
+[ext_resource type="Script" path="res://weapons/poison/poison_debuff.gd" id="3_3mt0f"]
+
+[sub_resource type="GDScript" id="GDScript_n2wkb"]
+resource_name = "target"
+script/source = "extends Node2D
+
+
+var target: Node2D
+@onready var stats = $Stats
+
+
+func _ready():
+	target = get_tree().get_first_node_in_group(\"player\")
+
+
+func _physics_process(delta):
+	global_position = global_position.move_toward(target.global_position, stats.speed * delta)
+"
+
+[sub_resource type="GDScript" id="GDScript_bv03d"]
+resource_name = "hitbox"
+script/source = "extends Area2D
+
+@onready var stats = $\"../Stats\"
+@onready var poison_debuff = $\"../PoisonDebuff\"
+
+func take_damage(amt: int):
+	stats.hp = max(0, stats.hp - amt)
+	if stats.hp == 0:
+		get_parent().queue_free()
+func poison(amt: int):
+	poison_debuff.start(amt)
+"
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_ue5ft"]
+size = Vector2(32, 32)
+
+[node name="Target" type="Node2D"]
+script = SubResource("GDScript_n2wkb")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+scale = Vector2(0.3, 0.3)
+texture = ExtResource("1_3penb")
+
+[node name="Hitbox" type="Area2D" parent="."]
+collision_layer = 2
+collision_mask = 0
+monitoring = false
+script = SubResource("GDScript_bv03d")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hitbox"]
+shape = SubResource("RectangleShape2D_ue5ft")
+
+[node name="Stats" type="Node2D" parent="."]
+script = ExtResource("2_hvsmw")
+
+[node name="PoisonDebuff" type="Node2D" parent="."]
+script = ExtResource("3_3mt0f")
+
+[node name="Expire" type="Timer" parent="PoisonDebuff"]
+wait_time = 2.0
+one_shot = true
+
+[node name="DoDamage" type="Timer" parent="PoisonDebuff"]
+
+[connection signal="timeout" from="PoisonDebuff/Expire" to="PoisonDebuff" method="_on_expire_timeout"]
+[connection signal="timeout" from="PoisonDebuff/DoDamage" to="PoisonDebuff" method="_on_do_damage_timeout"]

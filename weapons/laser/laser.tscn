@@ -1,0 +1,77 @@
+[gd_scene load_steps=5 format=3 uid="uid://bfe22gg38a12u"]
+
+[ext_resource type="PackedScene" uid="uid://80sicyclqnqk" path="res://weapons/laser/projectile.tscn" id="1_aw6je"]
+[ext_resource type="Texture2D" uid="uid://dulovi3xmy4r0" path="res://weapons/laser/Laser.png" id="2_3fidl"]
+
+[sub_resource type="GDScript" id="GDScript_45ipb"]
+resource_name = "laser"
+script/source = "extends Node2D
+
+
+@export var projectile: PackedScene
+@export var attack_area: Area2D
+@export var sprite: Sprite2D
+
+
+var can_shoot: bool
+
+
+func _ready():
+	charge_up()
+
+
+func _physics_process(_delta):
+	var areas = attack_area.get_overlapping_areas()
+	if areas.size() > 0:
+		if areas.size() > 1:
+			areas.sort_custom(sort_distance_ascending)
+		if can_shoot:
+			can_shoot = false
+			shoot(areas[0])
+			charge_up()
+
+
+func charge_up():
+	var t = create_tween()
+	t.tween_property(sprite, \"frame\", 2, 1)
+	await get_tree().create_timer(1).timeout
+	can_shoot = true
+
+
+func shoot(target: Node2D):
+	var p = projectile.instantiate() as Node2D
+	var h = get_tree().get_first_node_in_group(\"projectile_holder\")
+	h.add_child(p)
+	p.global_position = global_position
+	if not target.global_position.is_equal_approx(global_position):
+		p.look_at(target.global_position)
+  
+	sprite.frame = 0
+
+
+func sort_distance_ascending(a: Node2D, b: Node2D):
+	var p = global_position
+	return a.global_position.distance_to(p) > b.global_position.distance_to(p)
+"
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_5wvdu"]
+radius = 250.0
+
+[node name="Laser" type="Node2D" node_paths=PackedStringArray("attack_area", "sprite")]
+script = SubResource("GDScript_45ipb")
+projectile = ExtResource("1_aw6je")
+attack_area = NodePath("AttackArea")
+sprite = NodePath("Sprite2D")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture_filter = 1
+texture = ExtResource("2_3fidl")
+hframes = 3
+
+[node name="AttackArea" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 2
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="AttackArea"]
+shape = SubResource("CircleShape2D_5wvdu")
