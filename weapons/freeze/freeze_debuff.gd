@@ -4,8 +4,8 @@ extends Node2D
 var damage
 
 func start():
-  stats.speed = stats.base_speed * 0.5
-  $Expire.start()
+	stats.speed = stats.base_speed * 0.5
+	$Expire.start()
 
 func _on_expire_timeout():
-  stats.speed = stats.base_speed
+	stats.speed = stats.base_speed

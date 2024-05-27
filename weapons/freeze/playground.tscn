@@ -14,19 +14,19 @@ script/source = "extends Node2D
 
 
 func _ready():
-  spawn()
+	spawn()
 
 
 func spawn():
-  var n = scene.instantiate() as Node2D
-  add_child(n)
+	var n = scene.instantiate() as Node2D
+	add_child(n)
   
-  var d = Vector2.RIGHT.rotated(deg_to_rad(randf() * 360.0))
-  n.global_position = global_position + d * radius
+	var d = Vector2.RIGHT.rotated(deg_to_rad(randf() * 360.0))
+	n.global_position = global_position + d * radius
 
 
 func _on_spawn_timeout():
-  spawn()
+	spawn()
 "
 
 [node name="Playground" type="Node2D"]

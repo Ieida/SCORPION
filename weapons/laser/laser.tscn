@@ -17,41 +17,41 @@ var can_shoot: bool
 
 
 func _ready():
-  charge_up()
+	charge_up()
 
 
 func _physics_process(_delta):
-  var areas = attack_area.get_overlapping_areas()
-  if areas.size() > 0:
-    if areas.size() > 1:
-      areas.sort_custom(sort_distance_ascending)
-    if can_shoot:
-      can_shoot = false
-      shoot(areas[0])
-      charge_up()
+	var areas = attack_area.get_overlapping_areas()
+	if areas.size() > 0:
+		if areas.size() > 1:
+			areas.sort_custom(sort_distance_ascending)
+		if can_shoot:
+			can_shoot = false
+			shoot(areas[0])
+			charge_up()
 
 
 func charge_up():
-  var t = create_tween()
-  t.tween_property(sprite, \"frame\", 2, 1)
-  await get_tree().create_timer(1).timeout
-  can_shoot = true
+	var t = create_tween()
+	t.tween_property(sprite, \"frame\", 2, 1)
+	await get_tree().create_timer(1).timeout
+	can_shoot = true
 
 
 func shoot(target: Node2D):
-  var p = projectile.instantiate() as Node2D
-  var h = get_tree().get_first_node_in_group(\"projectile_holder\")
-  h.add_child(p)
-  p.global_position = global_position
-  if not target.global_position.is_equal_approx(global_position):
-    p.look_at(target.global_position)
+	var p = projectile.instantiate() as Node2D
+	var h = get_tree().get_first_node_in_group(\"projectile_holder\")
+	h.add_child(p)
+	p.global_position = global_position
+	if not target.global_position.is_equal_approx(global_position):
+		p.look_at(target.global_position)
   
-  sprite.frame = 0
+	sprite.frame = 0
 
 
 func sort_distance_ascending(a: Node2D, b: Node2D):
-  var p = global_position
-  return a.global_position.distance_to(p) > b.global_position.distance_to(p)
+	var p = global_position
+	return a.global_position.distance_to(p) > b.global_position.distance_to(p)
 "
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_5wvdu"]
