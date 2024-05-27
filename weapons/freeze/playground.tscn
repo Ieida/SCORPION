@@ -1,0 +1,51 @@
+[gd_scene load_steps=5 format=3 uid="uid://bo1f857osoaul"]
+
+[ext_resource type="PackedScene" uid="uid://ckdsch35e2kpi" path="res://weapons/freeze/target.tscn" id="2_4jd02"]
+[ext_resource type="PackedScene" uid="uid://dnsc5y1xdod3d" path="res://weapons/freeze/freeze.tscn" id="2_lxm6n"]
+[ext_resource type="AudioStream" uid="uid://b7tluv336ou4p" path="res://weapons/laser/temp_2.wav" id="3_kfsox"]
+
+[sub_resource type="GDScript" id="GDScript_iji43"]
+resource_name = "spawner"
+script/source = "extends Node2D
+
+
+@export var scene: PackedScene
+@export var radius: float = 500
+
+
+func _ready():
+  spawn()
+
+
+func spawn():
+  var n = scene.instantiate() as Node2D
+  add_child(n)
+  
+  var d = Vector2.RIGHT.rotated(deg_to_rad(randf() * 360.0))
+  n.global_position = global_position + d * radius
+
+
+func _on_spawn_timeout():
+  spawn()
+"
+
+[node name="Playground" type="Node2D"]
+
+[node name="Projectiles" type="Node" parent="." groups=["projectile_holder"]]
+
+[node name="AudioStreamPlayer2D" type="AudioStreamPlayer2D" parent="."]
+stream = ExtResource("3_kfsox")
+autoplay = true
+
+[node name="Spawner" type="Node2D" parent="."]
+script = SubResource("GDScript_iji43")
+scene = ExtResource("2_4jd02")
+
+[node name="Spawn" type="Timer" parent="Spawner"]
+wait_time = 2.0
+autostart = true
+
+[node name="Freeze" parent="." groups=["player"] instance=ExtResource("2_lxm6n")]
+position = Vector2(561, 279)
+
+[connection signal="timeout" from="Spawner/Spawn" to="Spawner" method="_on_spawn_timeout"]

@@ -1,0 +1,68 @@
+[gd_scene load_steps=7 format=3 uid="uid://ckdsch35e2kpi"]
+
+[ext_resource type="Texture2D" uid="uid://ywmr84swid8l" path="res://icon.svg" id="1_nhyby"]
+[ext_resource type="Script" path="res://weapons/freeze/stats.gd" id="2_w6nlw"]
+[ext_resource type="Script" path="res://weapons/freeze/freeze_debuff.gd" id="3_bspyb"]
+
+[sub_resource type="GDScript" id="GDScript_n2wkb"]
+resource_name = "target"
+script/source = "extends Node2D
+
+
+var target: Node2D
+@onready var stats = $Stats
+
+
+func _ready():
+  target = get_tree().get_first_node_in_group(\"player\")
+
+
+func _physics_process(delta):
+  global_position = global_position.move_toward(target.global_position, stats.speed * delta)
+"
+
+[sub_resource type="GDScript" id="GDScript_bv03d"]
+resource_name = "hitbox"
+script/source = "extends Area2D
+
+@onready var stats = $\"../Stats\"
+@onready var freeze_debuff = $\"../FreezeDebuff\"
+
+func take_damage(amt: int):
+  stats.hp = max(0, stats.hp - amt)
+  if stats.hp == 0:
+    get_parent().queue_free()
+func freeze(amt: int):
+  freeze_debuff.start()
+"
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_ue5ft"]
+size = Vector2(32, 32)
+
+[node name="Target" type="Node2D"]
+script = SubResource("GDScript_n2wkb")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+scale = Vector2(0.3, 0.3)
+texture = ExtResource("1_nhyby")
+
+[node name="Hitbox" type="Area2D" parent="."]
+collision_layer = 2
+collision_mask = 0
+monitoring = false
+script = SubResource("GDScript_bv03d")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hitbox"]
+shape = SubResource("RectangleShape2D_ue5ft")
+
+[node name="Stats" type="Node2D" parent="."]
+script = ExtResource("2_w6nlw")
+
+[node name="FreezeDebuff" type="Node2D" parent="."]
+script = ExtResource("3_bspyb")
+
+[node name="Expire" type="Timer" parent="FreezeDebuff"]
+wait_time = 2.5
+one_shot = true
+
+[connection signal="timeout" from="FreezeDebuff/Expire" to="FreezeDebuff" method="_on_expire_timeout"]
