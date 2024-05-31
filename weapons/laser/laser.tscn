@@ -1,72 +1,203 @@
-[gd_scene load_steps=5 format=3 uid="uid://bfe22gg38a12u"]
+[gd_scene load_steps=12 format=3 uid="uid://bfe22gg38a12u"]
 
 [ext_resource type="PackedScene" uid="uid://80sicyclqnqk" path="res://weapons/laser/projectile.tscn" id="1_aw6je"]
-[ext_resource type="Texture2D" uid="uid://dulovi3xmy4r0" path="res://weapons/laser/Laser.png" id="2_3fidl"]
+[ext_resource type="Texture2D" uid="uid://hwxjg2wi6un1" path="res://tiles/Laser.png" id="2_ghagi"]
 
 [sub_resource type="GDScript" id="GDScript_45ipb"]
 resource_name = "laser"
 script/source = "extends Node2D
 
 
+@export var _anim: AnimationPlayer
 @export var projectile: PackedScene
 @export var attack_area: Area2D
 @export var sprite: Sprite2D
+@export var hitbox: Area2D
+@export var rate_of_fire: float = 1
+@export var _deconstruct_particles: GPUParticles2D
 
 
+var anim_tween: Tween
 var can_shoot: bool
+var tier: int = 0
 
 
 func _ready():
+	_deconstruct_particles.emitting = false
 	charge_up()
+	play_idle()
 
 
 func _physics_process(_delta):
-	var areas = attack_area.get_overlapping_areas()
-	if areas.size() > 0:
-		if areas.size() > 1:
-			areas.sort_custom(sort_distance_ascending)
-		if can_shoot:
-			can_shoot = false
-			shoot(areas[0])
-			charge_up()
+	if attack_area.monitoring:
+		var areas = attack_area.get_overlapping_areas()
+		areas = areas.filter(filter_human_team)
+		if areas.size() > 0:
+			if areas.size() > 1:
+				areas.sort_custom(sort_distance_ascending)
+			if can_shoot:
+				can_shoot = false
+				shoot(areas[0])
+				charge_up()
 
 
 func charge_up():
-	var t = create_tween()
-	t.tween_property(sprite, \"frame\", 2, 1)
-	await get_tree().create_timer(1).timeout
+	await get_tree().create_timer(rate_of_fire).timeout
 	can_shoot = true
 
 
+func deconstruct():
+	attack_area.monitoring = false
+	hitbox.monitorable = false
+	_deconstruct_particles.emitting = true
+	await _deconstruct_particles.finished
+	queue_free()
+
+
+func filter_human_team(a) -> bool:
+	if a is Node:
+		return not a.is_in_group(\"human_team\")
+	else: return true
+
+
+func play_idle():
+	_anim.play(\"idle_%s\" % tier)
+
+
 func shoot(target: Node2D):
-	var p = projectile.instantiate() as Node2D
+	sprite.frame = tier * 5
+	var p = projectile.instantiate() as RayCast2D
+	for n in get_tree().get_nodes_in_group(\"human_team\"):
+		if n is CollisionObject2D:
+			p.add_exception(n)
 	var h = get_tree().get_first_node_in_group(\"projectile_holder\")
 	h.add_child(p)
 	p.global_position = global_position
 	if not target.global_position.is_equal_approx(global_position):
 		p.look_at(target.global_position)
-  
-	sprite.frame = 0
 
 
 func sort_distance_ascending(a: Node2D, b: Node2D):
 	var p = global_position
 	return a.global_position.distance_to(p) > b.global_position.distance_to(p)
+
+
+func upgrade():
+	if tier < 3:
+		tier += 1
+		play_idle()
 "
+
+[sub_resource type="Animation" id="Animation_yoelj"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath(".:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [1]
+}
+
+[sub_resource type="Animation" id="Animation_2tupf"]
+resource_name = "idle_1"
+length = 0.6
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath(".:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1, 1),
+"update": 1,
+"values": [6, 7, 8, 9, 8, 7, 6]
+}
+
+[sub_resource type="Animation" id="Animation_x5evy"]
+resource_name = "idle_2"
+length = 0.6
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath(".:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1, 1),
+"update": 1,
+"values": [11, 12, 13, 14, 13, 12, 11]
+}
+
+[sub_resource type="Animation" id="Animation_0g3a6"]
+resource_name = "idle_0"
+length = 0.6
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath(".:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1, 1),
+"update": 1,
+"values": [1, 2, 3, 4, 3, 2, 1]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_35wty"]
+_data = {
+"RESET": SubResource("Animation_yoelj"),
+"idle_0": SubResource("Animation_0g3a6"),
+"idle_1": SubResource("Animation_2tupf"),
+"idle_2": SubResource("Animation_x5evy")
+}
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_5wvdu"]
 radius = 250.0
 
-[node name="Laser" type="Node2D" node_paths=PackedStringArray("attack_area", "sprite")]
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_nmc44"]
+size = Vector2(32, 32)
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_b6cuh"]
+particle_flag_disable_z = true
+direction = Vector3(0, -1, 0)
+initial_velocity_min = 1.0
+initial_velocity_max = 1.0
+scale_min = 5.0
+scale_max = 10.0
+color = Color(0.501961, 0.501961, 0.501961, 0.25098)
+
+[node name="Laser" type="Node2D" node_paths=PackedStringArray("_anim", "attack_area", "sprite", "hitbox", "_deconstruct_particles")]
 script = SubResource("GDScript_45ipb")
+_anim = NodePath("Sprite2D/AnimationPlayer")
 projectile = ExtResource("1_aw6je")
 attack_area = NodePath("AttackArea")
 sprite = NodePath("Sprite2D")
+hitbox = NodePath("HumanHitbox")
+_deconstruct_particles = NodePath("GPUParticles2D")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
 texture_filter = 1
-texture = ExtResource("2_3fidl")
-hframes = 3
+texture = ExtResource("2_ghagi")
+offset = Vector2(0, -14)
+hframes = 5
+vframes = 3
+frame = 1
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="Sprite2D"]
+libraries = {
+"": SubResource("AnimationLibrary_35wty")
+}
 
 [node name="AttackArea" type="Area2D" parent="."]
 collision_layer = 0
@@ -75,3 +206,17 @@ monitorable = false
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="AttackArea"]
 shape = SubResource("CircleShape2D_5wvdu")
+
+[node name="HumanHitbox" type="Area2D" parent="." groups=["human_team"]]
+collision_layer = 2
+collision_mask = 0
+monitoring = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="HumanHitbox"]
+shape = SubResource("RectangleShape2D_nmc44")
+debug_color = Color(0, 0.6, 0.701961, 0.419608)
+
+[node name="GPUParticles2D" type="GPUParticles2D" parent="."]
+emitting = false
+process_material = SubResource("ParticleProcessMaterial_b6cuh")
+one_shot = true
