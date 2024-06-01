@@ -1,0 +1,50 @@
+[gd_scene load_steps=4 format=3 uid="uid://bolr8ahq4o4jp"]
+
+[ext_resource type="Script" path="res://construction/ui/option_ui.gd" id="1_a3876"]
+[ext_resource type="PackedScene" uid="uid://bghqp3mt6lqfk" path="res://construction/ui/option.tscn" id="1_c5ih1"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_taj0r"]
+font_size = 32
+
+[node name="OptionUI" type="PanelContainer" node_paths=PackedStringArray("title", "option_holder")]
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -230.0
+grow_horizontal = 2
+grow_vertical = 0
+size_flags_horizontal = 4
+size_flags_vertical = 4
+script = ExtResource("1_a3876")
+title = NodePath("MarginContainer/VBoxContainer/Title")
+option_holder = NodePath("MarginContainer/VBoxContainer/ScrollContainer/OptionsHolder")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Select an action"
+label_settings = SubResource("LabelSettings_taj0r")
+
+[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(188, 161)
+layout_mode = 2
+size_flags_vertical = 10
+
+[node name="OptionsHolder" type="HBoxContainer" parent="MarginContainer/VBoxContainer/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 6
+size_flags_vertical = 4
+alignment = 1
+
+[node name="Option" parent="MarginContainer/VBoxContainer/ScrollContainer/OptionsHolder" instance=ExtResource("1_c5ih1")]
+layout_mode = 2

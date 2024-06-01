@@ -1,0 +1,77 @@
+[gd_resource type="TileSet" load_steps=11 format=3 uid="uid://bwl4rv2cly4yh"]
+
+[ext_resource type="Texture2D" uid="uid://b0tgjeel1hkko" path="res://tiles/grass.png" id="1_fcaus"]
+[ext_resource type="Texture2D" uid="uid://hwxjg2wi6un1" path="res://tiles/Laser.png" id="2_atw7e"]
+[ext_resource type="Texture2D" uid="uid://boocqeypphpt7" path="res://tiles/selection.svg" id="3_y31h5"]
+[ext_resource type="PackedScene" uid="uid://bfe22gg38a12u" path="res://weapons/laser/laser.tscn" id="4_j4a6h"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_qqk56"]
+texture = ExtResource("1_fcaus")
+0:0/0 = 0
+0:0/0/modulate = Color(0.172549, 0.172549, 0.172549, 1)
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_h4bg2"]
+texture = ExtResource("2_atw7e")
+texture_region_size = Vector2i(32, 32)
+0:1/0 = 0
+0:1/0/texture_origin = Vector2i(0, 12)
+1:1/0 = 0
+1:1/0/texture_origin = Vector2i(0, 12)
+2:1/0 = 0
+2:1/0/texture_origin = Vector2i(0, 12)
+3:1/0 = 0
+3:1/0/texture_origin = Vector2i(0, 12)
+4:1/0 = 0
+4:1/0/texture_origin = Vector2i(0, 12)
+0:2/0 = 0
+0:2/0/texture_origin = Vector2i(0, 16)
+1:2/0 = 0
+1:2/0/texture_origin = Vector2i(0, 12)
+2:2/0 = 0
+2:2/0/texture_origin = Vector2i(0, 12)
+3:2/0 = 0
+3:2/0/texture_origin = Vector2i(0, 12)
+4:2/0 = 0
+4:2/0/texture_origin = Vector2i(0, 12)
+0:0/0 = 0
+0:0/0/texture_origin = Vector2i(0, 12)
+1:0/0 = 0
+1:0/0/texture_origin = Vector2i(0, 12)
+2:0/0 = 0
+2:0/0/texture_origin = Vector2i(0, 12)
+3:0/0 = 0
+3:0/0/texture_origin = Vector2i(0, 12)
+4:0/0 = 0
+4:0/0/texture_origin = Vector2i(0, 12)
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_dl28v"]
+resource_name = "hover"
+texture = ExtResource("3_y31h5")
+0:0/0 = 0
+0:0/0/modulate = Color(0, 1, 1, 0.25098)
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_8td1o"]
+resource_name = "select"
+texture = ExtResource("3_y31h5")
+0:0/0 = 0
+0:0/0/modulate = Color(0, 0.501961, 0.501961, 0.752941)
+
+[sub_resource type="TileSetScenesCollectionSource" id="TileSetScenesCollectionSource_thwr1"]
+scenes/1/scene = ExtResource("4_j4a6h")
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_nul3m"]
+resource_name = "water"
+texture = ExtResource("3_y31h5")
+0:0/0 = 0
+0:0/0/modulate = Color(0, 0.0901961, 0.129412, 1)
+
+[resource]
+tile_shape = 3
+tile_layout = 5
+tile_size = Vector2i(16, 11)
+sources/0 = SubResource("TileSetAtlasSource_qqk56")
+sources/1 = SubResource("TileSetAtlasSource_h4bg2")
+sources/2 = SubResource("TileSetAtlasSource_dl28v")
+sources/3 = SubResource("TileSetAtlasSource_8td1o")
+sources/4 = SubResource("TileSetScenesCollectionSource_thwr1")
+sources/5 = SubResource("TileSetAtlasSource_nul3m")

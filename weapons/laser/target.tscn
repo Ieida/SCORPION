@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=3 uid="uid://7mhm8qsqlyqb"]
+[gd_scene load_steps=11 format=3 uid="uid://7mhm8qsqlyqb"]
 
 [ext_resource type="Texture2D" uid="uid://ywmr84swid8l" path="res://icon.svg" id="1_o6wf1"]
 
@@ -9,14 +9,31 @@ script/source = "extends Node2D
 
 var target: Node2D
 @export var speed: float = 200
+@export var targeting_area: Area2D
+
+
+var is_dead: bool = false
 
 
 func _ready():
-	target = get_tree().get_first_node_in_group(\"player\")
+	add_to_group(\"targets\")
 
 
 func _physics_process(delta):
-	global_position = global_position.move_toward(target.global_position, speed * delta)
+	if is_dead: return
+	
+	if target and is_instance_valid(target):
+		global_position = global_position.move_toward(target.global_position, speed * delta)
+
+
+func _process(_delta):
+	if is_dead: return
+	
+	if not target:
+		var ars = targeting_area.get_overlapping_areas()
+		for a in ars:
+			if a.is_in_group(\"human_team\"):
+				target = a
 "
 
 [sub_resource type="GDScript" id="GDScript_bv03d"]
@@ -24,25 +41,83 @@ resource_name = "hitbox"
 script/source = "extends Area2D
 
 
-func take_damage(amt: int):
+@onready var particles: GPUParticles2D = $\"../GPUParticles2D\"
+@onready var sprite: Sprite2D = $\"../Sprite2D\"
+@onready var intd_intl = preload(\"res://construction/interdimensional_intelligence/interdimensional_intelligence.tscn\")
+
+
+func drop_interdimensional_intelligence():
+	var i = intd_intl.instantiate() as InterdimensionalIntelligence
+	get_tree().root.add_child(i)
+	i.global_position = global_position
+
+
+func take_damage(_amt: int):
+	get_parent().is_dead = true
+	process_mode = Node.PROCESS_MODE_DISABLED
+	sprite.hide()
+	particles.restart()
+	drop_interdimensional_intelligence()
+	await particles.finished
 	get_parent().queue_free()
 "
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_ue5ft"]
 size = Vector2(32, 32)
 
-[node name="Target" type="Node2D"]
+[sub_resource type="CircleShape2D" id="CircleShape2D_oxhrn"]
+radius = 1024.0
+
+[sub_resource type="Gradient" id="Gradient_cykqg"]
+colors = PackedColorArray(0, 0, 0.996078, 1, 0, 1, 0, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_lvipj"]
+gradient = SubResource("Gradient_cykqg")
+
+[sub_resource type="Gradient" id="Gradient_4u3w2"]
+colors = PackedColorArray(1, 1, 1, 1, 0, 0, 0, 0)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_divnc"]
+gradient = SubResource("Gradient_4u3w2")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_qcpjq"]
+particle_flag_disable_z = true
+spread = 180.0
+initial_velocity_min = 50.0
+initial_velocity_max = 50.0
+scale_min = 16.0
+scale_max = 16.0
+color_ramp = SubResource("GradientTexture1D_divnc")
+color_initial_ramp = SubResource("GradientTexture1D_lvipj")
+
+[node name="Target" type="Node2D" node_paths=PackedStringArray("targeting_area")]
 script = SubResource("GDScript_n2wkb")
+speed = 150.0
+targeting_area = NodePath("TargetingArea")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
 scale = Vector2(0.3, 0.3)
 texture = ExtResource("1_o6wf1")
 
-[node name="Hitbox" type="Area2D" parent="."]
+[node name="TargetHitbox" type="Area2D" parent="."]
 collision_layer = 2
 collision_mask = 0
 monitoring = false
 script = SubResource("GDScript_bv03d")
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Hitbox"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="TargetHitbox"]
 shape = SubResource("RectangleShape2D_ue5ft")
+
+[node name="TargetingArea" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 2
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="TargetingArea"]
+shape = SubResource("CircleShape2D_oxhrn")
+
+[node name="GPUParticles2D" type="GPUParticles2D" parent="."]
+emitting = false
+process_material = SubResource("ParticleProcessMaterial_qcpjq")
+one_shot = true
+explosiveness = 1.0
