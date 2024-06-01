@@ -1,0 +1,60 @@
+[gd_scene load_steps=4 format=3 uid="uid://bghqp3mt6lqfk"]
+
+[ext_resource type="Script" path="res://construction/ui/option.gd" id="1_4m06q"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_ti4rv"]
+font_size = 32
+
+[sub_resource type="LabelSettings" id="LabelSettings_jierq"]
+font_size = 32
+
+[node name="Option" type="PanelContainer" node_paths=PackedStringArray("title", "description", "button")]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -5.0
+offset_top = -5.0
+offset_right = 5.0
+offset_bottom = 5.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+script = ExtResource("1_4m06q")
+title = NodePath("MarginContainer/VBoxContainer/VBoxContainer/Title")
+description = NodePath("MarginContainer/VBoxContainer/VBoxContainer/Description")
+button = NodePath("MarginContainer/VBoxContainer/Button")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 5
+theme_override_constants/margin_top = 5
+theme_override_constants/margin_right = 5
+theme_override_constants/margin_bottom = 5
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="Title" type="Label" parent="MarginContainer/VBoxContainer/VBoxContainer"]
+layout_mode = 2
+text = "Title"
+label_settings = SubResource("LabelSettings_ti4rv")
+
+[node name="Description" type="Label" parent="MarginContainer/VBoxContainer/VBoxContainer"]
+layout_mode = 2
+text = "Description"
+label_settings = SubResource("LabelSettings_jierq")
+
+[node name="Button" type="Button" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Name"

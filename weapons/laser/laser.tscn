@@ -1,49 +1,87 @@
 [gd_scene load_steps=12 format=3 uid="uid://bfe22gg38a12u"]
 
-[ext_resource type="PackedScene" uid="uid://80sicyclqnqk" path="res://weapons/laser/projectile.tscn" id="1_aw6je"]
 [ext_resource type="Texture2D" uid="uid://hwxjg2wi6un1" path="res://tiles/Laser.png" id="2_ghagi"]
 
 [sub_resource type="GDScript" id="GDScript_45ipb"]
 resource_name = "laser"
-script/source = "extends Node2D
+script/source = "extends Building
 
 
 @export var _anim: AnimationPlayer
-@export var projectile: PackedScene
+@export var _deconstruct_particles: GPUParticles2D
+@export var beam: Node2D
+@export var beam_muzzle: Node2D
 @export var attack_area: Area2D
 @export var sprite: Sprite2D
 @export var hitbox: Area2D
-@export var rate_of_fire: float = 1
-@export var _deconstruct_particles: GPUParticles2D
 
 
 var anim_tween: Tween
-var can_shoot: bool
-var tier: int = 0
+var can_shoot: bool = true
+var is_shooting: bool
+var target: Hitbox
+var heat: float
+var max_heat: float = 2
+var heat_per_second: float = 1
+var heat_dissipation_per_second: float = 1
 
 
 func _ready():
-	_deconstruct_particles.emitting = false
-	charge_up()
+	super._ready()
+	beam.hide()
 	play_idle()
 
 
 func _physics_process(_delta):
-	if attack_area.monitoring:
-		var areas = attack_area.get_overlapping_areas()
-		areas = areas.filter(filter_human_team)
-		if areas.size() > 0:
-			if areas.size() > 1:
-				areas.sort_custom(sort_distance_ascending)
-			if can_shoot:
-				can_shoot = false
-				shoot(areas[0])
-				charge_up()
+	if not target or not is_instance_valid(target):
+		if attack_area.monitoring:
+			var areas = attack_area.get_overlapping_areas()
+			areas = areas.filter(filter_human_team)
+			if areas.size() > 0:
+				if areas.size() > 1:
+					areas.sort_custom(sort_distance_ascending)
+				if can_shoot:
+					can_shoot = false
+					target = areas[0]
 
 
-func charge_up():
-	await get_tree().create_timer(rate_of_fire).timeout
-	can_shoot = true
+func _process(_delta):
+	# Begin shooting
+	if not is_shooting and can_shoot and target and not target.is_destroyed:
+		shoot()
+	
+	if is_shooting:
+		update_beam()
+		update_heat(_delta)
+		deal_damage(_delta)
+	else:
+		cool(_delta)
+
+
+func _on_max_heat_reached():
+	stop_shooting()
+	can_shoot = false
+	_anim.stop()
+	sprite.frame = _current_tier_index * 5 + 1
+
+
+func cool(_delta):
+	heat -= heat_dissipation_per_second * _delta
+	if heat <= 0:
+		heat = 0
+		if not can_shoot:
+			can_shoot = true
+			play_idle()
+
+
+func deal_damage(_delta):
+	target.take_damage(stats.damage * _delta)
+	if target.is_destroyed:
+		stop_shooting()
+		target = null
+		can_shoot = false
+		_anim.stop()
+		sprite.frame = _current_tier_index * 5 + 1
 
 
 func deconstruct():
@@ -61,20 +99,14 @@ func filter_human_team(a) -> bool:
 
 
 func play_idle():
-	_anim.play(\"idle_%s\" % tier)
+	_anim.play(\"idle_%s\" % _current_tier_index)
 
 
-func shoot(target: Node2D):
-	sprite.frame = tier * 5
-	var p = projectile.instantiate() as RayCast2D
-	for n in get_tree().get_nodes_in_group(\"human_team\"):
-		if n is CollisionObject2D:
-			p.add_exception(n)
-	var h = get_tree().get_first_node_in_group(\"projectile_holder\")
-	h.add_child(p)
-	p.global_position = global_position
-	if not target.global_position.is_equal_approx(global_position):
-		p.look_at(target.global_position)
+func shoot():
+	_anim.stop()
+	sprite.frame = _current_tier_index * 5
+	beam.show()
+	is_shooting = true
 
 
 func sort_distance_ascending(a: Node2D, b: Node2D):
@@ -82,10 +114,33 @@ func sort_distance_ascending(a: Node2D, b: Node2D):
 	return a.global_position.distance_to(p) > b.global_position.distance_to(p)
 
 
+func stop_shooting():
+	is_shooting = false
+	beam.hide()
+
+
+func update_beam():
+	var dst = beam_muzzle.global_position.distance_to(target.global_position)
+	beam.global_position = beam_muzzle.global_position
+	beam.look_at(target.global_position)
+	beam.scale.x = dst / 32.0
+
+
+func update_heat(delta: float):
+	heat += heat_per_second * delta
+	if heat >= max_heat:
+		heat = max_heat
+		_on_max_heat_reached()
+
+
 func upgrade():
-	if tier < 3:
-		tier += 1
-		play_idle()
+	super.upgrade()
+	stop_shooting()
+	play_idle()
+	if _current_tier_index == 1:
+		beam_muzzle.position.y = -14
+	elif _current_tier_index == 2:
+		beam_muzzle.position.y = -21.5
 "
 
 [sub_resource type="Animation" id="Animation_yoelj"]
@@ -101,6 +156,23 @@ tracks/0/keys = {
 "transitions": PackedFloat32Array(1),
 "update": 1,
 "values": [1]
+}
+
+[sub_resource type="Animation" id="Animation_0g3a6"]
+resource_name = "idle_0"
+length = 0.6
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath(".:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1, 1),
+"update": 1,
+"values": [1, 2, 3, 4, 3, 2, 1]
 }
 
 [sub_resource type="Animation" id="Animation_2tupf"]
@@ -137,23 +209,6 @@ tracks/0/keys = {
 "values": [11, 12, 13, 14, 13, 12, 11]
 }
 
-[sub_resource type="Animation" id="Animation_0g3a6"]
-resource_name = "idle_0"
-length = 0.6
-loop_mode = 1
-tracks/0/type = "value"
-tracks/0/imported = false
-tracks/0/enabled = true
-tracks/0/path = NodePath(".:frame")
-tracks/0/interp = 1
-tracks/0/loop_wrap = true
-tracks/0/keys = {
-"times": PackedFloat32Array(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6),
-"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1, 1),
-"update": 1,
-"values": [1, 2, 3, 4, 3, 2, 1]
-}
-
 [sub_resource type="AnimationLibrary" id="AnimationLibrary_35wty"]
 _data = {
 "RESET": SubResource("Animation_yoelj"),
@@ -177,14 +232,18 @@ scale_min = 5.0
 scale_max = 10.0
 color = Color(0.501961, 0.501961, 0.501961, 0.25098)
 
-[node name="Laser" type="Node2D" node_paths=PackedStringArray("_anim", "attack_area", "sprite", "hitbox", "_deconstruct_particles")]
+[sub_resource type="QuadMesh" id="QuadMesh_yiy56"]
+size = Vector2(32, 2)
+
+[node name="Laser" type="Node2D" node_paths=PackedStringArray("_anim", "_deconstruct_particles", "beam", "beam_muzzle", "attack_area", "sprite", "hitbox")]
 script = SubResource("GDScript_45ipb")
 _anim = NodePath("Sprite2D/AnimationPlayer")
-projectile = ExtResource("1_aw6je")
+_deconstruct_particles = NodePath("GPUParticles2D")
+beam = NodePath("Beam")
+beam_muzzle = NodePath("BeamMuzzle")
 attack_area = NodePath("AttackArea")
 sprite = NodePath("Sprite2D")
 hitbox = NodePath("HumanHitbox")
-_deconstruct_particles = NodePath("GPUParticles2D")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
 texture_filter = 1
@@ -220,3 +279,15 @@ debug_color = Color(0, 0.6, 0.701961, 0.419608)
 emitting = false
 process_material = SubResource("ParticleProcessMaterial_b6cuh")
 one_shot = true
+
+[node name="Beam" type="Node2D" parent="."]
+show_behind_parent = true
+top_level = true
+
+[node name="MeshInstance2D" type="MeshInstance2D" parent="Beam"]
+modulate = Color(1, 0, 0, 1)
+position = Vector2(16, 0)
+mesh = SubResource("QuadMesh_yiy56")
+
+[node name="BeamMuzzle" type="Node2D" parent="."]
+position = Vector2(0, -9)

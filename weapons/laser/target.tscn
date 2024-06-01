@@ -92,6 +92,7 @@ color_initial_ramp = SubResource("GradientTexture1D_lvipj")
 
 [node name="Target" type="Node2D" node_paths=PackedStringArray("targeting_area")]
 script = SubResource("GDScript_n2wkb")
+speed = 150.0
 targeting_area = NodePath("TargetingArea")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]

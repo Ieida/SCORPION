@@ -1,11 +1,8 @@
-[gd_scene load_steps=11 format=3 uid="uid://dijshjxosqc6x"]
+[gd_scene load_steps=7 format=3 uid="uid://dijshjxosqc6x"]
 
 [ext_resource type="TileSet" uid="uid://bwl4rv2cly4yh" path="res://construction/playground_tile_set.tres" id="1_m81gj"]
-[ext_resource type="PackedScene" uid="uid://7mhm8qsqlyqb" path="res://weapons/laser/target.tscn" id="2_2k1hs"]
-[ext_resource type="PackedScene" uid="uid://bfe22gg38a12u" path="res://weapons/laser/laser.tscn" id="2_myf1r"]
-[ext_resource type="PackedScene" uid="uid://dnsc5y1xdod3d" path="res://weapons/freeze/freeze.tscn" id="3_n6xlk"]
-[ext_resource type="PackedScene" uid="uid://bghqp3mt6lqfk" path="res://construction/ui/button.tscn" id="3_vefyk"]
-[ext_resource type="PackedScene" uid="uid://curf3kig2dx1v" path="res://weapons/poison/poison.tscn" id="4_3d8el"]
+[ext_resource type="Script" path="res://construction/construction.gd" id="2_go01b"]
+[ext_resource type="PackedScene" uid="uid://bolr8ahq4o4jp" path="res://construction/ui/option_ui.tscn" id="2_qxoeo"]
 
 [sub_resource type="GDScript" id="GDScript_pw4no"]
 resource_name = "enemy_spawner"
@@ -13,14 +10,16 @@ script/source = "extends Node2D
 
 
 @export var radius: float = 500
-@export var rate: float = 0.5
-@export var enemy: PackedScene
+@export var interval: float
+
+
+@onready var enemy: PackedScene = preload(\"res://enemies/prototype/prototype.tscn\")
 
 
 func _ready():
 	while true:
 		spawn()
-		await get_tree().create_timer(rate).timeout
+		await get_tree().create_timer(interval).timeout
 
 
 func spawn():
@@ -36,30 +35,22 @@ resource_name = "player"
 script/source = "extends Node
 
 
-enum UIState { HIDDEN, CONSTRUCTION, BUILDING }
-
-
-@export var construction_ui: CanvasLayer
-@export var building_ui: CanvasLayer
-@export var buildings: Array[PackedScene]
+@export var option_ui: OptionUI
+@export var buildings: Array[Construction]
 @export var ii_count: Label
 
 
-var ui_state: UIState
 var tile_map: TileMap
 var selected_tile: Vector2i
 var constructed_buildings: Dictionary
-var interdimensional_intelligence: int
+var interdimensional_intelligence: int = 50
 var pickup_area: Area2D
 
 
 func _ready():
 	tile_map = get_tree().get_first_node_in_group(\"construction_map\")
-	construction_ui.hide()
-	building_ui.hide()
-	ui_state = UIState.HIDDEN
-	construction_ui.option_chosen.connect(_on_construction_ui_option_chosen)
-	building_ui.option_chosen.connect(_on_building_ui_option_chosen)
+	option_ui.hide()
+	update_ii_count()
 	# Pickup
 	pickup_area = Area2D.new()
 	pickup_area.monitorable = false
@@ -76,7 +67,7 @@ func _ready():
 func _unhandled_input(event):
 	if event.is_action_pressed(\"select\"):
 		clear_selection()
-		hide_ui()
+		hide_option_ui()
 		var p = tile_map.local_to_map(tile_map.get_local_mouse_position())
 		# Is the pressed cell a ground cell
 		if is_ground_cell(p):
@@ -108,12 +99,11 @@ func _on_cell_selected():
 #region Buildings
 
 func build(coords: Vector2i, building: PackedScene):
-	var b = building.instantiate()
+	var b: Building = building.instantiate() as Building
 	add_child(b)
-	if b is Node2D:
-		var p = tile_map.map_to_local(coords)
-		p = tile_map.to_global(p)
-		b.global_position = p + Vector2(0, 0)
+	var p = tile_map.map_to_local(coords)
+	p = tile_map.to_global(p)
+	b.global_position = p + Vector2(0, -3)
 	constructed_buildings[coords] = b
 
 
@@ -121,9 +111,9 @@ func get_building(coords: Vector2i) -> Variant:
 	return constructed_buildings[coords] if constructed_buildings.has(coords) else null
 
 
-func get_building_by_name(n: String) -> PackedScene:
+func get_building_by_name(n: String) -> Construction:
 	for b in buildings:
-		var bn = b.resource_path.get_file().trim_suffix(\".tscn\").capitalize()
+		var bn = b.name
 		if bn == n:
 			return b
 	return null
@@ -132,7 +122,7 @@ func get_building_by_name(n: String) -> PackedScene:
 func get_buildings_names() -> Array[String]:
 	var a: Array[String] = []
 	for b in buildings:
-		var n = b.resource_path.get_file().trim_suffix(\".tscn\").capitalize()
+		var n = b.name
 		a.append(n)
 	return a
 
@@ -143,6 +133,18 @@ func get_buildings_options() -> Array[String]:
 
 #endregion
 
+
+#region Interdimensional Intelligence
+
+func update_ii_count():
+	ii_count.text = str(interdimensional_intelligence)
+
+
+func set_ii(a: int):
+	interdimensional_intelligence = a
+	update_ii_count()
+
+#endregion
 
 func clear_selection():
 	selected_tile = Vector2i.MAX
@@ -161,94 +163,93 @@ func select_cell(coords: Vector2i):
 
 #region UI
 
-func _on_building_ui_option_chosen(option: String):
+func hide_option_ui():
+	option_ui.hide()
+
+
+func _on_deconstruct_chosen(building: Building):
 	var p = selected_tile
-	hide_building_ui()
+	hide_option_ui()
 	clear_selection()
-	var b = get_building(p)
-	if option == \"Deconstruct\" and b.has_method(\"deconstruct\"):
-		constructed_buildings.erase(p)
-		b.deconstruct()
-	elif not option.nocasecmp_to(\"upgrade\") and b.has_method(\"upgrade\"):
-		b.upgrade()
+	constructed_buildings.erase(p)
+	building.deconstruct()
 
 
-func _on_construction_ui_option_chosen(option: String):
-	var p = selected_tile
-	hide_construction_ui()
+func _on_upgrade_chosen(building: Building):
+	var t: Tier = building.get_upgrade()
+	if interdimensional_intelligence < t.cost: return
+	hide_option_ui()
 	clear_selection()
-	build(p, get_building_by_name(option))
+	set_ii(interdimensional_intelligence - t.cost)
+	building.upgrade()
 
 
-func hide_ui():
-	if ui_state == UIState.CONSTRUCTION:
-		hide_construction_ui()
-	elif ui_state == UIState.BUILDING:
-		hide_building_ui()
-
-
-func hide_building_ui():
-	building_ui.hide()
-	ui_state = UIState.HIDDEN
-
-
-func hide_construction_ui():
-	construction_ui.hide()
-	ui_state = UIState.HIDDEN
+func _get_building_options(building: Building) -> Array[OptionInfo]:
+	var bt: Tier = building.get_upgrade()
+	print(building.has_upgrade())
+	var o: Array[OptionInfo] = []
+	# Deconstruct option
+	var doi: OptionInfo = OptionInfo.new()
+	doi.title = \"\"
+	doi.description = \"\"
+	doi.button_name = \"Deconstruct\"
+	doi.callback = func ():
+		_on_deconstruct_chosen(building)
+	o.append(doi)
+	# Upgrade option
+	var uoi: OptionInfo = OptionInfo.new()
+	uoi.title = bt.resource_path.get_file().trim_suffix(\".tres\").capitalize()
+	uoi.description = \"Costs %sII\" % bt.cost
+	uoi.button_name = \"Upgrade\"
+	uoi.callback = func ():
+		_on_upgrade_chosen(building)
+	o.append(uoi)
+	return o
 
 
 func show_building_ui():
-	ui_state = UIState.BUILDING
-	var o = get_buildings_options()
-	building_ui.display_options(o)
+	var o = _get_building_options(constructed_buildings[selected_tile])
+	option_ui.set_title(\"Choose Option\")
+	option_ui.display_options(o)
+
+
+func _on_construct_chosen(path: String, tier: Tier):
+	if interdimensional_intelligence < tier.cost: return
+	var p = selected_tile
+	hide_option_ui()
+	clear_selection()
+	set_ii(interdimensional_intelligence - tier.cost)
+	var s: PackedScene = load(path) as PackedScene
+	build(p, s)
+
+
+func _get_construction_options() -> Array[OptionInfo]:
+	var o: Array[OptionInfo] = []
+	var dirs = DirAccess.get_directories_at(\"res://weapons\")
+	for dir in dirs:
+		var p = \"res://weapons/%s/tiers/tier1.tres\" % dir
+		if FileAccess.file_exists(p):
+			var t: Tier = load(p)
+			var oi: OptionInfo = OptionInfo.new()
+			oi.title = dir.capitalize()
+			oi.description = \"Costs %sII\" % t.cost
+			oi.button_name = \"Construct\"
+			oi.callback = func ():
+				_on_construct_chosen(\"res://weapons/%s/%s.tscn\" % [dir, dir], t)
+			o.append(oi)
+	return o
 
 
 func show_construction_ui():
-	ui_state = UIState.CONSTRUCTION
-	var o = get_buildings_names()
-	construction_ui.display_options(o)
+	var o: Array[OptionInfo] = _get_construction_options()
+	option_ui.set_title(\"Choose Building\")
+	option_ui.display_options(o)
 
 #endregion
 "
 
-[sub_resource type="GDScript" id="GDScript_1ywrb"]
-resource_name = "construction_ui"
-script/source = "extends CanvasLayer
-
-
-signal option_chosen(option: String)
-
-
-@export var button: PackedScene
-@export var option_holder: BoxContainer
-
-
-func display_options(options: Array[String]):
-	# Clear previous options
-	for c in option_holder.get_children():
-		c.queue_free()
-	
-	# Draw new options
-	for o in options:
-		var b = button.instantiate() as Button
-		if b:
-			option_holder.add_child(b)
-			b.text = o
-			b.pressed.connect(
-				func a():
-					hide()
-					_on_option_pressed(o)
-			, CONNECT_ONE_SHOT)
-		else: b.queue_free()
-	show()
-
-
-func _on_option_pressed(option: String):
-	option_chosen.emit(option)
-"
-
-[sub_resource type="LabelSettings" id="LabelSettings_taj0r"]
-font_size = 32
+[sub_resource type="Resource" id="Resource_1rh17"]
+script = ExtResource("2_go01b")
 
 [node name="Playground" type="Node"]
 
@@ -271,14 +272,13 @@ layer_4/tile_data = PackedInt32Array()
 
 [node name="EnemySpawner" type="Node2D" parent="."]
 script = SubResource("GDScript_pw4no")
-enemy = ExtResource("2_2k1hs")
+interval = 4.0
 
-[node name="Player" type="Node" parent="." node_paths=PackedStringArray("construction_ui", "building_ui", "ii_count")]
+[node name="Player" type="Node" parent="." node_paths=PackedStringArray("option_ui", "ii_count")]
 script = SubResource("GDScript_2poc1")
-construction_ui = NodePath("ConstructionUI")
-building_ui = NodePath("BuildingUI")
-buildings = Array[PackedScene]([ExtResource("3_n6xlk"), ExtResource("2_myf1r"), ExtResource("4_3d8el")])
-ii_count = NodePath("HUD/Control/MarginContainer/HBoxContainer/Count")
+option_ui = NodePath("HUD/Control/MarginContainer/OptionUI")
+buildings = Array[ExtResource("2_go01b")]([SubResource("Resource_1rh17")])
+ii_count = NodePath("HUD/Control/MarginContainer/InterdimensionalIntelligence/Count")
 
 [node name="HUD" type="CanvasLayer" parent="Player"]
 
@@ -303,135 +303,23 @@ theme_override_constants/margin_top = 15
 theme_override_constants/margin_right = 15
 theme_override_constants/margin_bottom = 15
 
-[node name="HBoxContainer" type="HBoxContainer" parent="Player/HUD/Control/MarginContainer"]
+[node name="InterdimensionalIntelligence" type="HBoxContainer" parent="Player/HUD/Control/MarginContainer"]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="Player/HUD/Control/MarginContainer/HBoxContainer"]
+[node name="Label" type="Label" parent="Player/HUD/Control/MarginContainer/InterdimensionalIntelligence"]
 layout_mode = 2
 size_flags_vertical = 0
 text = "Interdimensional Intelligence:"
 
-[node name="Count" type="Label" parent="Player/HUD/Control/MarginContainer/HBoxContainer"]
+[node name="Count" type="Label" parent="Player/HUD/Control/MarginContainer/InterdimensionalIntelligence"]
 layout_mode = 2
 size_flags_vertical = 0
 text = "0"
 
-[node name="ConstructionUI" type="CanvasLayer" parent="Player" node_paths=PackedStringArray("option_holder")]
-script = SubResource("GDScript_1ywrb")
-button = ExtResource("3_vefyk")
-option_holder = NodePath("Control/PanelContainer/MarginContainer/VBoxContainer/ScrollContainer/Options")
-
-[node name="Control" type="Control" parent="Player/ConstructionUI"]
-layout_mode = 3
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-
-[node name="PanelContainer" type="PanelContainer" parent="Player/ConstructionUI/Control"]
-custom_minimum_size = Vector2(0, 145)
-layout_mode = 1
-anchors_preset = 12
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_top = -8.0
-grow_horizontal = 2
-grow_vertical = 0
-
-[node name="MarginContainer" type="MarginContainer" parent="Player/ConstructionUI/Control/PanelContainer"]
+[node name="OptionUI" parent="Player/HUD/Control/MarginContainer" instance=ExtResource("2_qxoeo")]
 layout_mode = 2
-theme_override_constants/margin_left = 10
-theme_override_constants/margin_top = 10
-theme_override_constants/margin_right = 10
-theme_override_constants/margin_bottom = 10
-
-[node name="VBoxContainer" type="VBoxContainer" parent="Player/ConstructionUI/Control/PanelContainer/MarginContainer"]
-layout_mode = 2
-
-[node name="Label" type="Label" parent="Player/ConstructionUI/Control/PanelContainer/MarginContainer/VBoxContainer"]
-layout_mode = 2
-text = "Select a defense structure"
-label_settings = SubResource("LabelSettings_taj0r")
-
-[node name="ScrollContainer" type="ScrollContainer" parent="Player/ConstructionUI/Control/PanelContainer/MarginContainer/VBoxContainer"]
-layout_mode = 2
-size_flags_vertical = 3
-
-[node name="Options" type="HBoxContainer" parent="Player/ConstructionUI/Control/PanelContainer/MarginContainer/VBoxContainer/ScrollContainer"]
-layout_mode = 2
-size_flags_vertical = 3
-alignment = 1
-
-[node name="Button" parent="Player/ConstructionUI/Control/PanelContainer/MarginContainer/VBoxContainer/ScrollContainer/Options" instance=ExtResource("3_vefyk")]
-layout_mode = 2
-
-[node name="BuildingUI" type="CanvasLayer" parent="Player" node_paths=PackedStringArray("option_holder")]
-script = SubResource("GDScript_1ywrb")
-button = ExtResource("3_vefyk")
-option_holder = NodePath("Control/PanelContainer/MarginContainer/VBoxContainer/ScrollContainer/Options")
-
-[node name="Control" type="Control" parent="Player/BuildingUI"]
-layout_mode = 3
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-
-[node name="PanelContainer" type="PanelContainer" parent="Player/BuildingUI/Control"]
-custom_minimum_size = Vector2(0, 145)
-layout_mode = 1
-anchors_preset = 12
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_top = -8.0
-grow_horizontal = 2
-grow_vertical = 0
-
-[node name="MarginContainer" type="MarginContainer" parent="Player/BuildingUI/Control/PanelContainer"]
-layout_mode = 2
-theme_override_constants/margin_left = 10
-theme_override_constants/margin_top = 10
-theme_override_constants/margin_right = 10
-theme_override_constants/margin_bottom = 10
-
-[node name="VBoxContainer" type="VBoxContainer" parent="Player/BuildingUI/Control/PanelContainer/MarginContainer"]
-layout_mode = 2
-
-[node name="Label" type="Label" parent="Player/BuildingUI/Control/PanelContainer/MarginContainer/VBoxContainer"]
-layout_mode = 2
-text = "Select an action"
-label_settings = SubResource("LabelSettings_taj0r")
-
-[node name="ScrollContainer" type="ScrollContainer" parent="Player/BuildingUI/Control/PanelContainer/MarginContainer/VBoxContainer"]
-layout_mode = 2
-size_flags_vertical = 3
-
-[node name="Options" type="HBoxContainer" parent="Player/BuildingUI/Control/PanelContainer/MarginContainer/VBoxContainer/ScrollContainer"]
-layout_mode = 2
-size_flags_vertical = 3
-alignment = 1
-
-[node name="Button" type="Button" parent="Player/BuildingUI/Control/PanelContainer/MarginContainer/VBoxContainer/ScrollContainer/Options"]
-custom_minimum_size = Vector2(0, 20.91)
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-theme_override_font_sizes/font_size = 32
-text = "Deconstruct"
-
-[node name="Button2" type="Button" parent="Player/BuildingUI/Control/PanelContainer/MarginContainer/VBoxContainer/ScrollContainer/Options"]
-custom_minimum_size = Vector2(0, 20.91)
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-theme_override_font_sizes/font_size = 32
-text = "Upgrade"
+size_flags_horizontal = 1
+size_flags_vertical = 8
 
 [node name="Camera2D" type="Camera2D" parent="Player"]
 zoom = Vector2(2, 2)

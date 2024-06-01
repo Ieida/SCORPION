@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="Tier" load_steps=4 format=3 uid="uid://46a4qt8hqrjb"]
+
+[ext_resource type="Script" path="res://construction/tier.gd" id="1_xi7ji"]
+[ext_resource type="Script" path="res://weapons/stats.gd" id="2_6mjiy"]
+
+[sub_resource type="Resource" id="Resource_7i6it"]
+script = ExtResource("2_6mjiy")
+health = 200.0
+damage = 200.0
+rate_of_fire = 120.0
+
+[resource]
+script = ExtResource("1_xi7ji")
+cost = 40
+stats = SubResource("Resource_7i6it")
