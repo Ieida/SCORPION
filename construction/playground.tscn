@@ -186,7 +186,6 @@ func _on_upgrade_chosen(building: Building):
 
 func _get_building_options(building: Building) -> Array[OptionInfo]:
 	var bt: Tier = building.get_upgrade()
-	print(building.has_upgrade())
 	var o: Array[OptionInfo] = []
 	# Deconstruct option
 	var doi: OptionInfo = OptionInfo.new()
@@ -310,7 +309,7 @@ layer_4/tile_data = PackedInt32Array()
 
 [node name="EnemySpawner" type="Node2D" parent="."]
 script = SubResource("GDScript_pw4no")
-interval = 4.0
+interval = 2.0
 
 [node name="Player" type="Node" parent="." node_paths=PackedStringArray("option_ui", "ii_count")]
 script = SubResource("GDScript_2poc1")

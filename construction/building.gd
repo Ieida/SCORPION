@@ -32,7 +32,6 @@ func load_tiers() -> Array[Tier]:
 	var n = Helper.uncapitalize(name)
 	for f in DirAccess.get_files_at("res://weapons/%s/tiers" % n):
 		a.append(load("res://weapons/%s/tiers/%s" % [n, f]))
-	print(a)
 	return a
 
 
