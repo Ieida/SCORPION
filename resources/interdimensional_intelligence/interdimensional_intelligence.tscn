@@ -1,7 +1,7 @@
 [gd_scene load_steps=8 format=3 uid="uid://dflwjyoiohep3"]
 
 [ext_resource type="Script" path="res://resources/interdimensional_intelligence/interdimensional_intelligence.gd" id="1_cyo2r"]
-[ext_resource type="Texture2D" uid="uid://ywmr84swid8l" path="res://icon.svg" id="2_ju44h"]
+[ext_resource type="Texture2D" uid="uid://suwde8c5jbx3" path="res://resources/interdimensional_intelligence/Documents.png" id="2_ybx73"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_arrb7"]
 
@@ -94,8 +94,9 @@ _anim = NodePath("Sprite2D/AnimationPlayer")
 shape = SubResource("CircleShape2D_arrb7")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
-scale = Vector2(0.2, 0.2)
-texture = ExtResource("2_ju44h")
+texture_filter = 1
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("2_ybx73")
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="Sprite2D"]
 libraries = {

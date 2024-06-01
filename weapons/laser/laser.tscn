@@ -1,5 +1,6 @@
-[gd_scene load_steps=12 format=3 uid="uid://bfe22gg38a12u"]
+[gd_scene load_steps=13 format=3 uid="uid://bfe22gg38a12u"]
 
+[ext_resource type="Script" path="res://nodes/hitbox/hitbox.gd" id="2_0cu2s"]
 [ext_resource type="Texture2D" uid="uid://hwxjg2wi6un1" path="res://tiles/Laser.png" id="2_ghagi"]
 
 [sub_resource type="GDScript" id="GDScript_45ipb"]
@@ -13,7 +14,7 @@ script/source = "extends Building
 @export var beam_muzzle: Node2D
 @export var attack_area: Area2D
 @export var sprite: Sprite2D
-@export var hitbox: Area2D
+@export var hitbox: Hitbox
 
 
 var anim_tween: Tween
@@ -29,23 +30,21 @@ var heat_dissipation_per_second: float = 1
 func _ready():
 	super._ready()
 	beam.hide()
+	hitbox.health = stats.health
+	hitbox.destroyed.connect(_on_hitbox_destroyed)
 	play_idle()
 
 
 func _physics_process(_delta):
 	if not target or not is_instance_valid(target):
 		if attack_area.monitoring:
-			var areas = attack_area.get_overlapping_areas()
-			areas = areas.filter(filter_human_team)
-			if areas.size() > 0:
-				if areas.size() > 1:
-					areas.sort_custom(sort_distance_ascending)
-				if can_shoot:
-					can_shoot = false
-					target = areas[0]
+			look_for_target()
 
 
 func _process(_delta):
+	if target and not is_instance_valid(target):
+		target = null
+	
 	# Begin shooting
 	if not is_shooting and can_shoot and target and not target.is_destroyed:
 		shoot()
@@ -56,6 +55,10 @@ func _process(_delta):
 		deal_damage(_delta)
 	else:
 		cool(_delta)
+
+
+func _on_hitbox_destroyed():
+	deconstruct()
 
 
 func _on_max_heat_reached():
@@ -89,6 +92,7 @@ func deconstruct():
 	hitbox.monitorable = false
 	_deconstruct_particles.emitting = true
 	await _deconstruct_particles.finished
+	deconstructed.emit()
 	queue_free()
 
 
@@ -96,6 +100,17 @@ func filter_human_team(a) -> bool:
 	if a is Node:
 		return not a.is_in_group(\"human_team\")
 	else: return true
+
+
+func look_for_target():
+	var areas = attack_area.get_overlapping_areas()
+	areas = areas.filter(filter_human_team)
+	if areas.size() > 0:
+		if areas.size() > 1:
+			areas.sort_custom(sort_distance_ascending)
+		if can_shoot:
+			can_shoot = false
+			target = areas[areas.size() - 1]
 
 
 func play_idle():
@@ -136,6 +151,7 @@ func update_heat(delta: float):
 func upgrade():
 	super.upgrade()
 	stop_shooting()
+	hitbox.health = stats.health
 	play_idle()
 	if _current_tier_index == 1:
 		beam_muzzle.position.y = -14
@@ -235,7 +251,8 @@ color = Color(0.501961, 0.501961, 0.501961, 0.25098)
 [sub_resource type="QuadMesh" id="QuadMesh_yiy56"]
 size = Vector2(32, 2)
 
-[node name="Laser" type="Node2D" node_paths=PackedStringArray("_anim", "_deconstruct_particles", "beam", "beam_muzzle", "attack_area", "sprite", "hitbox")]
+[node name="Laser" type="Node2D" node_paths=PackedStringArray("_anim", "_deconstruct_particles", "beam", "beam_muzzle", "attack_area", "sprite", "hitbox") groups=["laser"]]
+z_index = 1
 script = SubResource("GDScript_45ipb")
 _anim = NodePath("Sprite2D/AnimationPlayer")
 _deconstruct_particles = NodePath("GPUParticles2D")
@@ -270,6 +287,8 @@ shape = SubResource("CircleShape2D_5wvdu")
 collision_layer = 2
 collision_mask = 0
 monitoring = false
+script = ExtResource("2_0cu2s")
+max_health = 50.0
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="HumanHitbox"]
 shape = SubResource("RectangleShape2D_nmc44")
@@ -281,8 +300,7 @@ process_material = SubResource("ParticleProcessMaterial_b6cuh")
 one_shot = true
 
 [node name="Beam" type="Node2D" parent="."]
-show_behind_parent = true
-top_level = true
+z_index = -1
 
 [node name="MeshInstance2D" type="MeshInstance2D" parent="Beam"]
 modulate = Color(1, 0, 0, 1)

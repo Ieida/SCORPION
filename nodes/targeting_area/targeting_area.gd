@@ -1,0 +1,1 @@
+class_name TargetingArea extends Area2D

@@ -1,0 +1,148 @@
+[gd_scene load_steps=18 format=3 uid="uid://dbdq7s7xhymuj"]
+
+[ext_resource type="Script" path="res://enemies/normal/worm/worm.gd" id="1_c8cft"]
+[ext_resource type="Texture2D" uid="uid://c8d0xi7of6atf" path="res://enemies/Enemies.png" id="1_pkn63"]
+[ext_resource type="PackedScene" uid="uid://b1kgowjmw8bf1" path="res://nodes/hitbox/hitbox.tscn" id="2_4dtfn"]
+[ext_resource type="Script" path="res://weapons/stats.gd" id="2_r2n1u"]
+[ext_resource type="PackedScene" uid="uid://4eu8o0qoktyu" path="res://nodes/targeting_area/targeting_area.tscn" id="3_lhknx"]
+
+[sub_resource type="Resource" id="Resource_srpvq"]
+script = ExtResource("2_r2n1u")
+health = 100.0
+damage = 50.0
+rate_of_fire = 30.0
+speed = 50.0
+attack_range = 20.0
+
+[sub_resource type="Animation" id="Animation_0e377"]
+resource_name = "move"
+length = 0.2
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath(".:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.1),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [2, 3]
+}
+
+[sub_resource type="Animation" id="Animation_gurie"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath(".:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [2]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath(".:modulate")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Color(1, 1, 1, 1)]
+}
+
+[sub_resource type="Animation" id="Animation_io1o4"]
+resource_name = "spawn"
+length = 0.2
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath(".:modulate")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.1),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Color(1, 1, 1, 0), Color(1, 1, 1, 1)]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_5ohjd"]
+_data = {
+"RESET": SubResource("Animation_gurie"),
+"move": SubResource("Animation_0e377"),
+"spawn": SubResource("Animation_io1o4")
+}
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_86f44"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_7vdr1"]
+radius = 1000.0
+
+[sub_resource type="Gradient" id="Gradient_dqa50"]
+colors = PackedColorArray(0, 0, 0.996078, 1, 0, 1, 0, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_nofhm"]
+gradient = SubResource("Gradient_dqa50")
+
+[sub_resource type="Gradient" id="Gradient_kub2e"]
+colors = PackedColorArray(1, 1, 1, 1, 0, 0, 0, 0)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_8lm0e"]
+gradient = SubResource("Gradient_kub2e")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_oao42"]
+particle_flag_disable_z = true
+spread = 180.0
+initial_velocity_min = 50.0
+initial_velocity_max = 50.0
+scale_min = 16.0
+scale_max = 16.0
+color_ramp = SubResource("GradientTexture1D_8lm0e")
+color_initial_ramp = SubResource("GradientTexture1D_nofhm")
+
+[node name="Worm" type="Node2D" node_paths=PackedStringArray("_anim", "sprite", "hitbox", "targeting_area", "death_particles") groups=["alien"]]
+z_index = 2
+script = ExtResource("1_c8cft")
+_anim = NodePath("Sprite2D/AnimationPlayer")
+sprite = NodePath("Sprite2D")
+hitbox = NodePath("Hitbox")
+targeting_area = NodePath("TargetingArea")
+death_particles = NodePath("DeathParticles")
+stats = SubResource("Resource_srpvq")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture_filter = 1
+texture = ExtResource("1_pkn63")
+hframes = 2
+vframes = 2
+frame = 2
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="Sprite2D"]
+libraries = {
+"": SubResource("AnimationLibrary_5ohjd")
+}
+autoplay = "spawn"
+
+[node name="Hitbox" parent="." groups=["alien"] instance=ExtResource("2_4dtfn")]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hitbox"]
+shape = SubResource("CircleShape2D_86f44")
+
+[node name="TargetingArea" parent="." instance=ExtResource("3_lhknx")]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="TargetingArea"]
+shape = SubResource("CircleShape2D_7vdr1")
+
+[node name="DeathParticles" type="GPUParticles2D" parent="."]
+emitting = false
+process_material = SubResource("ParticleProcessMaterial_oao42")
+one_shot = true
+explosiveness = 1.0

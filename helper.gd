@@ -1,6 +1,10 @@
 extends Node
 
 
+func _enter_tree():
+	Building.load_tiers()
+
+
 func uncapitalize(s: String) -> String:
 	var ns: String = ""
 	for i in s.length():

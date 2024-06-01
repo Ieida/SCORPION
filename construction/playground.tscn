@@ -1,32 +1,56 @@
-[gd_scene load_steps=8 format=3 uid="uid://dijshjxosqc6x"]
+[gd_scene load_steps=11 format=3 uid="uid://dijshjxosqc6x"]
 
 [ext_resource type="TileSet" uid="uid://bwl4rv2cly4yh" path="res://construction/playground_tile_set.tres" id="1_m81gj"]
-[ext_resource type="Script" path="res://construction/construction.gd" id="2_go01b"]
 [ext_resource type="PackedScene" uid="uid://bolr8ahq4o4jp" path="res://construction/ui/option_ui.tscn" id="2_qxoeo"]
+[ext_resource type="Texture2D" uid="uid://suwde8c5jbx3" path="res://resources/interdimensional_intelligence/Documents.png" id="3_pwf7h"]
 
 [sub_resource type="GDScript" id="GDScript_pw4no"]
 resource_name = "enemy_spawner"
 script/source = "extends Node2D
 
 
+@export var player: Node
 @export var radius: float = 500
 @export var interval: float
 
 
-@onready var enemy: PackedScene = preload(\"res://enemies/prototype/prototype.tscn\")
+@onready var enemy: PackedScene = preload(\"res://enemies/normal/worm/worm.tscn\")
+@onready var elite: PackedScene = preload(\"res://enemies/elite/hydra/hydra.tscn\")
 
 
 func _ready():
+	increase_interval.call_deferred()
+	spawn_elite.call_deferred()
 	while true:
-		spawn()
+		var d: Dictionary = player.constructed_buildings
+		if d.size() > 1:
+			spawn()
 		await get_tree().create_timer(interval).timeout
+
+
+func increase_interval():
+	while true:
+		await get_tree().create_timer(10).timeout
+		interval = clampf(interval - interval * 0.1, 0.5, interval)
 
 
 func spawn():
 	var e = enemy.instantiate()
 	add_child(e)
 	if e is Node2D:
-		var d = Vector2.RIGHT.rotated(randf() * 360.0)
+		var d = Vector2.RIGHT.rotated(deg_to_rad(randf() * 360.0))
+		e.global_position = global_position + d * radius
+
+
+func spawn_elite():
+	while true:
+		await get_tree().create_timer(interval * 5.0).timeout
+		var cb: Dictionary = player.constructed_buildings
+		if cb.size() <= 1:
+			continue
+		var e = elite.instantiate() as Node2D
+		add_child(e)
+		var d = Vector2.RIGHT.rotated(deg_to_rad(randf() * 360.0))
 		e.global_position = global_position + d * radius
 "
 
@@ -36,8 +60,10 @@ script/source = "extends Node
 
 
 @export var option_ui: OptionUI
-@export var buildings: Array[Construction]
 @export var ii_count: Label
+
+
+@onready var game_over: Control = get_tree().get_first_node_in_group(\"game_over_ui\")
 
 
 var tile_map: TileMap
@@ -45,11 +71,13 @@ var selected_tile: Vector2i
 var constructed_buildings: Dictionary
 var interdimensional_intelligence: int = 50
 var pickup_area: Area2D
+var headquarters_coords: Vector2i
 
 
 func _ready():
 	tile_map = get_tree().get_first_node_in_group(\"construction_map\")
 	option_ui.hide()
+	game_over.hide()
 	update_ii_count()
 	# Pickup
 	pickup_area = Area2D.new()
@@ -62,26 +90,38 @@ func _ready():
 	c.shape = CircleShape2D.new()
 	c.shape.radius = 1000
 	pickup_area.add_child(c)
+	
+	# Add headquarters
+	var hq = load(\"res://weapons/headquarters/headquarters.tscn\")
+	build(Vector2i.ZERO, hq)
+	var h = get_tree().get_first_node_in_group(\"headquarters\")
+	var hc = tile_map.to_local(h.global_position)
+	headquarters_coords = tile_map.local_to_map(hc)
 
 
 func _unhandled_input(event):
 	if event.is_action_pressed(\"select\"):
 		clear_selection()
 		hide_option_ui()
-		var p = tile_map.local_to_map(tile_map.get_local_mouse_position())
-		# Is the pressed cell a ground cell
-		if is_ground_cell(p):
-			select_cell(p)
-			if get_building(p):
-				show_building_ui()
-			else: show_construction_ui()
+		var clls: Array[Vector2i] = tile_map.get_used_cells(3)
+		if clls.size() > 0:
+			var p = clls[0]
+			if p != headquarters_coords:
+				# Is the pressed cell a ground cell
+				if is_ground_cell(p):
+					select_cell(p)
+					if get_building(p):
+						show_building_ui()
+					else: show_construction_ui()
 	elif event is InputEventMouseMotion:
 		tile_map.clear_layer(3)
 		var p = tile_map.local_to_map(tile_map.get_local_mouse_position())
-		var uc = tile_map.get_used_cells(1)
-		if uc.has(p):
-			if p != selected_tile:
-				tile_map.set_cell(3, p, 2, Vector2i(0, 0))
+		# Avoid selecting the headquarters
+		if p != headquarters_coords:
+			var uc = tile_map.get_used_cells(1)
+			if uc.has(p):
+				if p != selected_tile:
+					tile_map.set_cell(3, p, 2, Vector2i(0, 0))
 
 
 func _physics_process(_delta):
@@ -96,40 +136,41 @@ func _on_cell_selected():
 	show_construction_ui()
 
 
+func _on_game_over():
+	hide_option_ui()
+	game_over.show()
+	var b = get_tree().get_first_node_in_group(\"restart_button\") as Button
+	b.pressed.connect(_on_restart_pressed)
+
+
+func _on_restart_pressed():
+	get_tree().reload_current_scene.call_deferred()
+
+
 #region Buildings
+
+func _on_building_deconstructed(coords: Vector2i):
+	if coords == headquarters_coords:
+		_on_game_over()
+	elif selected_tile == coords:
+		hide_option_ui()
+	constructed_buildings.erase(coords)
+
 
 func build(coords: Vector2i, building: PackedScene):
 	var b: Building = building.instantiate() as Building
-	add_child(b)
+	tile_map.add_child(b)
 	var p = tile_map.map_to_local(coords)
 	p = tile_map.to_global(p)
 	b.global_position = p + Vector2(0, -3)
 	constructed_buildings[coords] = b
+	var f = func ():
+		_on_building_deconstructed(coords)
+	b.deconstructed.connect(f)
 
 
 func get_building(coords: Vector2i) -> Variant:
 	return constructed_buildings[coords] if constructed_buildings.has(coords) else null
-
-
-func get_building_by_name(n: String) -> Construction:
-	for b in buildings:
-		var bn = b.name
-		if bn == n:
-			return b
-	return null
-
-
-func get_buildings_names() -> Array[String]:
-	var a: Array[String] = []
-	for b in buildings:
-		var n = b.name
-		a.append(n)
-	return a
-
-
-func get_buildings_options() -> Array[String]:
-	var a: Array[String] = [\"Deconstruct\", \"Upgrade\"]
-	return a
 
 #endregion
 
@@ -249,9 +290,6 @@ func show_construction_ui():
 #endregion
 "
 
-[sub_resource type="Resource" id="Resource_1rh17"]
-script = ExtResource("2_go01b")
-
 [sub_resource type="GDScript" id="GDScript_u50iq"]
 resource_name = "crosshairs"
 script/source = "extends Control
@@ -268,12 +306,12 @@ func _process(_delta):
 	if ts.size() > 0:
 		for t in ts:
 			if crosshairs.values().has(t): continue
-			if t is Node2D:
+			if t is Hitbox:
 				add_new_target(t)
 	
 	for c in crosshairs:
 		var t = crosshairs[c]
-		if not t or t.hitbox.is_destroyed:
+		if not t or t.is_destroyed:
 			crosshairs.erase(c)
 			c.queue_free()
 			continue
@@ -287,10 +325,33 @@ func add_new_target(t: Node2D):
 
 
 func process_crosshair(t: Node2D, c: Control):
-	c.global_position = t.global_position + Vector2(-8, -8)
+	c.global_position = t.global_position + Vector2(0, 0)
 "
 
-[node name="Playground" type="Node"]
+[sub_resource type="GDScript" id="GDScript_8cpgb"]
+resource_name = "hud"
+script/source = "extends CanvasLayer
+
+
+func _ready():
+	var b = get_tree().get_first_node_in_group(\"start_button\") as Button
+	b.pressed.connect(_on_start_button_pressed)
+
+
+func _on_start_button_pressed():
+	var i = get_tree().get_first_node_in_group(\"intro_ui\") as Control
+	i.hide()
+"
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_2j15p"]
+bg_color = Color(0, 0, 0, 0.752941)
+
+[sub_resource type="LabelSettings" id="LabelSettings_jegx1"]
+font_size = 32
+
+[sub_resource type="LabelSettings" id="LabelSettings_8ytyf"]
+
+[node name="Playground" type="Node2D"]
 
 [node name="TileMap" type="TileMap" parent="." groups=["construction_map"]]
 texture_filter = 1
@@ -309,14 +370,15 @@ layer_4/tile_data = PackedInt32Array()
 
 [node name="ProjectileHolder" type="Node" parent="." groups=["projectile_holder"]]
 
-[node name="EnemySpawner" type="Node2D" parent="."]
+[node name="EnemySpawner" type="Node2D" parent="." node_paths=PackedStringArray("player")]
 script = SubResource("GDScript_pw4no")
+player = NodePath("../Player")
+radius = 250.0
 interval = 2.0
 
 [node name="Player" type="Node" parent="." node_paths=PackedStringArray("option_ui", "ii_count")]
 script = SubResource("GDScript_2poc1")
 option_ui = NodePath("HUD/Control/MarginContainer/OptionUI")
-buildings = Array[ExtResource("2_go01b")]([SubResource("Resource_1rh17")])
 ii_count = NodePath("HUD/Control/MarginContainer/InterdimensionalIntelligence/Count")
 
 [node name="Crosshairs" type="Control" parent="Player"]
@@ -330,6 +392,7 @@ mouse_filter = 2
 script = SubResource("GDScript_u50iq")
 
 [node name="HUD" type="CanvasLayer" parent="Player"]
+script = SubResource("GDScript_8cpgb")
 
 [node name="Control" type="Control" parent="Player/HUD"]
 layout_mode = 3
@@ -354,6 +417,16 @@ theme_override_constants/margin_bottom = 15
 
 [node name="InterdimensionalIntelligence" type="HBoxContainer" parent="Player/HUD/Control/MarginContainer"]
 layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 0
+
+[node name="TextureRect" type="TextureRect" parent="Player/HUD/Control/MarginContainer/InterdimensionalIntelligence"]
+texture_filter = 1
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+size_flags_horizontal = 4
+texture = ExtResource("3_pwf7h")
+stretch_mode = 2
 
 [node name="Label" type="Label" parent="Player/HUD/Control/MarginContainer/InterdimensionalIntelligence"]
 layout_mode = 2
@@ -369,6 +442,116 @@ text = "0"
 layout_mode = 2
 size_flags_horizontal = 1
 size_flags_vertical = 8
+
+[node name="GameOver" type="Control" parent="Player/HUD/Control" groups=["game_over_ui"]]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="Panel" parent="Player/HUD/Control/GameOver"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_2j15p")
+
+[node name="PanelContainer" type="PanelContainer" parent="Player/HUD/Control/GameOver"]
+layout_mode = 2
+offset_left = 366.0
+offset_top = 223.0
+offset_right = 785.0
+offset_bottom = 424.0
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="MarginContainer" type="MarginContainer" parent="Player/HUD/Control/GameOver/PanelContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Player/HUD/Control/GameOver/PanelContainer/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="Title" type="Label" parent="Player/HUD/Control/GameOver/PanelContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Alien Victory"
+label_settings = SubResource("LabelSettings_jegx1")
+horizontal_alignment = 1
+
+[node name="Description" type="Label" parent="Player/HUD/Control/GameOver/PanelContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "The aliens have successfully invaded your planet"
+label_settings = SubResource("LabelSettings_8ytyf")
+
+[node name="Button" type="Button" parent="Player/HUD/Control/GameOver/PanelContainer/MarginContainer/VBoxContainer" groups=["restart_button"]]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Restart"
+
+[node name="Intro" type="Control" parent="Player/HUD/Control" groups=["intro_ui"]]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="Panel" parent="Player/HUD/Control/Intro"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_2j15p")
+
+[node name="PanelContainer" type="PanelContainer" parent="Player/HUD/Control/Intro"]
+layout_mode = 2
+offset_left = 366.0
+offset_top = 223.0
+offset_right = 785.0
+offset_bottom = 424.0
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="MarginContainer" type="MarginContainer" parent="Player/HUD/Control/Intro/PanelContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Player/HUD/Control/Intro/PanelContainer/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="Title" type="Label" parent="Player/HUD/Control/Intro/PanelContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Alien Invasion"
+label_settings = SubResource("LabelSettings_jegx1")
+horizontal_alignment = 1
+
+[node name="Description" type="Label" parent="Player/HUD/Control/Intro/PanelContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Sergeant David - Day of the Invasion
+
+\"Good morning, sir! Today is he day of our predicted invasion. Defenses are prepared, and we are ready to defend the attack!\""
+label_settings = SubResource("LabelSettings_8ytyf")
+autowrap_mode = 3
+
+[node name="Button" type="Button" parent="Player/HUD/Control/Intro/PanelContainer/MarginContainer/VBoxContainer" groups=["start_button"]]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Begin"
 
 [node name="Camera2D" type="Camera2D" parent="Player"]
 zoom = Vector2(2, 2)

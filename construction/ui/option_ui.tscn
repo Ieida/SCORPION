@@ -32,8 +32,9 @@ layout_mode = 2
 
 [node name="Title" type="Label" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
-text = "Select an action"
+text = "Title"
 label_settings = SubResource("LabelSettings_taj0r")
+horizontal_alignment = 1
 
 [node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/VBoxContainer"]
 custom_minimum_size = Vector2(188, 161)

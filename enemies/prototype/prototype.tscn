@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://enemies/prototype/prototype.gd" id="1_1kmhp"]
 [ext_resource type="Texture2D" uid="uid://ywmr84swid8l" path="res://icon.svg" id="1_5weto"]
-[ext_resource type="Script" path="res://nodes/hitbox.gd" id="3_0mdhq"]
+[ext_resource type="Script" path="res://nodes/hitbox/hitbox.gd" id="3_4rwr2"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_ue5ft"]
 size = Vector2(16, 16)
@@ -13,13 +13,13 @@ radius = 1024.0
 [sub_resource type="Gradient" id="Gradient_cykqg"]
 colors = PackedColorArray(0, 0, 0.996078, 1, 0, 1, 0, 1)
 
-[sub_resource type="GradientTexture1D" id="GradientTexture1D_lvipj"]
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_qffes"]
 gradient = SubResource("Gradient_cykqg")
 
 [sub_resource type="Gradient" id="Gradient_4u3w2"]
 colors = PackedColorArray(1, 1, 1, 1, 0, 0, 0, 0)
 
-[sub_resource type="GradientTexture1D" id="GradientTexture1D_divnc"]
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_cll3h"]
 gradient = SubResource("Gradient_4u3w2")
 
 [sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_qcpjq"]
@@ -29,8 +29,8 @@ initial_velocity_min = 50.0
 initial_velocity_max = 50.0
 scale_min = 16.0
 scale_max = 16.0
-color_ramp = SubResource("GradientTexture1D_divnc")
-color_initial_ramp = SubResource("GradientTexture1D_lvipj")
+color_ramp = SubResource("GradientTexture1D_cll3h")
+color_initial_ramp = SubResource("GradientTexture1D_qffes")
 
 [node name="Prototype" type="Node2D" node_paths=PackedStringArray("targeting_area", "hitbox", "death_particles", "sprite") groups=["alien"]]
 script = ExtResource("1_1kmhp")
@@ -48,7 +48,7 @@ texture = ExtResource("1_5weto")
 collision_layer = 2
 collision_mask = 0
 monitoring = false
-script = ExtResource("3_0mdhq")
+script = ExtResource("3_4rwr2")
 max_health = 50.0
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="TargetHitbox"]

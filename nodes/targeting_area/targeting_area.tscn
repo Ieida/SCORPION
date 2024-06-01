@@ -1,0 +1,9 @@
+[gd_scene load_steps=2 format=3 uid="uid://4eu8o0qoktyu"]
+
+[ext_resource type="Script" path="res://nodes/targeting_area/targeting_area.gd" id="1_2gu5n"]
+
+[node name="TargetingArea" type="Area2D"]
+collision_layer = 0
+collision_mask = 2
+monitorable = false
+script = ExtResource("1_2gu5n")
