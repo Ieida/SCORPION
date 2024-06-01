@@ -23,4 +23,4 @@ func display(info: OptionInfo):
 	description.text = str(info.description)
 	if not info.description: description.hide()
 	button.text = info.button_name
-	button.pressed.connect(info.callback, CONNECT_ONE_SHOT)
+	button.pressed.connect(info.callback)

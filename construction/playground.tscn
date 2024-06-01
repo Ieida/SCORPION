@@ -185,7 +185,6 @@ func _on_upgrade_chosen(building: Building):
 
 
 func _get_building_options(building: Building) -> Array[OptionInfo]:
-	var bt: Tier = building.get_upgrade()
 	var o: Array[OptionInfo] = []
 	# Deconstruct option
 	var doi: OptionInfo = OptionInfo.new()
@@ -196,13 +195,16 @@ func _get_building_options(building: Building) -> Array[OptionInfo]:
 		_on_deconstruct_chosen(building)
 	o.append(doi)
 	# Upgrade option
-	var uoi: OptionInfo = OptionInfo.new()
-	uoi.title = bt.resource_path.get_file().trim_suffix(\".tres\").capitalize()
-	uoi.description = \"Costs %sII\" % bt.cost
-	uoi.button_name = \"Upgrade\"
-	uoi.callback = func ():
-		_on_upgrade_chosen(building)
-	o.append(uoi)
+	if building.has_upgrade():
+		var bt: Tier = building.get_upgrade()
+		var uoi: OptionInfo = OptionInfo.new()
+		uoi.title = bt.resource_path.get_file().trim_suffix(\".tres\").capitalize()
+		uoi.description = \"Costs %sII\" % bt.cost
+		uoi.button_name = \"Upgrade\"
+		uoi.callback = func ():
+			_on_upgrade_chosen(building)
+		o.append(uoi)
+	
 	return o
 
 
