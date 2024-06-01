@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=3 uid="uid://bfe22gg38a12u"]
+[gd_scene load_steps=6 format=3 uid="uid://bfe22gg38a12u"]
 
 [ext_resource type="PackedScene" uid="uid://80sicyclqnqk" path="res://weapons/laser/projectile.tscn" id="1_aw6je"]
 [ext_resource type="Texture2D" uid="uid://dulovi3xmy4r0" path="res://weapons/laser/Laser.png" id="2_3fidl"]
@@ -11,6 +11,7 @@ script/source = "extends Node2D
 @export var projectile: PackedScene
 @export var attack_area: Area2D
 @export var sprite: Sprite2D
+@export var hitbox: Area2D
 
 
 var can_shoot: bool
@@ -22,6 +23,7 @@ func _ready():
 
 func _physics_process(_delta):
 	var areas = attack_area.get_overlapping_areas()
+	areas = areas.filter(filter_human_team)
 	if areas.size() > 0:
 		if areas.size() > 1:
 			areas.sort_custom(sort_distance_ascending)
@@ -34,12 +36,19 @@ func _physics_process(_delta):
 func charge_up():
 	var t = create_tween()
 	t.tween_property(sprite, \"frame\", 2, 1)
-	await get_tree().create_timer(1).timeout
+	await get_tree().create_timer(0.1).timeout
 	can_shoot = true
 
 
+func filter_human_team(a) -> bool:
+	if a is Node:
+		return not a.is_in_group(\"human_team\")
+	else: return true
+
+
 func shoot(target: Node2D):
-	var p = projectile.instantiate() as Node2D
+	var p = projectile.instantiate() as RayCast2D
+	p.add_exception(hitbox)
 	var h = get_tree().get_first_node_in_group(\"projectile_holder\")
 	h.add_child(p)
 	p.global_position = global_position
@@ -57,15 +66,20 @@ func sort_distance_ascending(a: Node2D, b: Node2D):
 [sub_resource type="CircleShape2D" id="CircleShape2D_5wvdu"]
 radius = 250.0
 
-[node name="Laser" type="Node2D" node_paths=PackedStringArray("attack_area", "sprite")]
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_nmc44"]
+size = Vector2(32, 32)
+
+[node name="Laser" type="Node2D" node_paths=PackedStringArray("attack_area", "sprite", "hitbox")]
 script = SubResource("GDScript_45ipb")
 projectile = ExtResource("1_aw6je")
 attack_area = NodePath("AttackArea")
 sprite = NodePath("Sprite2D")
+hitbox = NodePath("HumanHitbox")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
 texture_filter = 1
 texture = ExtResource("2_3fidl")
+offset = Vector2(0, -12)
 hframes = 3
 
 [node name="AttackArea" type="Area2D" parent="."]
@@ -75,3 +89,12 @@ monitorable = false
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="AttackArea"]
 shape = SubResource("CircleShape2D_5wvdu")
+
+[node name="HumanHitbox" type="Area2D" parent="." groups=["human_team"]]
+collision_layer = 2
+collision_mask = 0
+monitoring = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="HumanHitbox"]
+shape = SubResource("RectangleShape2D_nmc44")
+debug_color = Color(0, 0.6, 0.701961, 0.419608)

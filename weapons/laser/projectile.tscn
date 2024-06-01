@@ -9,6 +9,10 @@ script/source = "extends RayCast2D
 @export var damage: int = 10
 
 
+func _ready():
+	pass
+
+
 func _physics_process(delta):
 	var d = global_transform.basis_xform(Vector2.RIGHT)
 	var m = speed * delta
@@ -20,8 +24,8 @@ func _physics_process(delta):
 			c.call(\"take_damage\", damage)
 			queue_free()
 			return
-			global_translate(d * m)
-			target_position.x = m + 0.01
+	global_translate(d * m)
+	target_position.x = m + 0.01
 "
 
 [sub_resource type="QuadMesh" id="QuadMesh_7gy82"]
@@ -52,7 +56,6 @@ color_ramp = SubResource("GradientTexture1D_4jmu6")
 color_initial_ramp = SubResource("GradientTexture1D_3qc5l")
 
 [node name="Projectile" type="RayCast2D"]
-enabled = false
 target_position = Vector2(50, 0)
 collision_mask = 3
 hit_from_inside = true
