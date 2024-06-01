@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://dijshjxosqc6x"]
+[gd_scene load_steps=8 format=3 uid="uid://dijshjxosqc6x"]
 
 [ext_resource type="TileSet" uid="uid://bwl4rv2cly4yh" path="res://construction/playground_tile_set.tres" id="1_m81gj"]
 [ext_resource type="Script" path="res://construction/construction.gd" id="2_go01b"]
@@ -251,6 +251,44 @@ func show_construction_ui():
 [sub_resource type="Resource" id="Resource_1rh17"]
 script = ExtResource("2_go01b")
 
+[sub_resource type="GDScript" id="GDScript_u50iq"]
+resource_name = "crosshairs"
+script/source = "extends Control
+
+
+@onready var crosshair: PackedScene = preload(\"res://crosshair.tscn\")
+
+
+var crosshairs: Dictionary
+
+
+func _process(_delta):
+	var ts = get_tree().get_nodes_in_group(\"alien\")
+	if ts.size() > 0:
+		for t in ts:
+			if crosshairs.values().has(t): continue
+			if t is Node2D:
+				add_new_target(t)
+	
+	for c in crosshairs:
+		var t = crosshairs[c]
+		if not t or t.hitbox.is_destroyed:
+			crosshairs.erase(c)
+			c.queue_free()
+			continue
+		process_crosshair(t, c)
+
+
+func add_new_target(t: Node2D):
+	var c = crosshair.instantiate() as Control
+	crosshairs[c] = t
+	add_child(c)
+
+
+func process_crosshair(t: Node2D, c: Control):
+	c.global_position = t.global_position + Vector2(-8, -8)
+"
+
 [node name="Playground" type="Node"]
 
 [node name="TileMap" type="TileMap" parent="." groups=["construction_map"]]
@@ -279,6 +317,16 @@ script = SubResource("GDScript_2poc1")
 option_ui = NodePath("HUD/Control/MarginContainer/OptionUI")
 buildings = Array[ExtResource("2_go01b")]([SubResource("Resource_1rh17")])
 ii_count = NodePath("HUD/Control/MarginContainer/InterdimensionalIntelligence/Count")
+
+[node name="Crosshairs" type="Control" parent="Player"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = SubResource("GDScript_u50iq")
 
 [node name="HUD" type="CanvasLayer" parent="Player"]
 

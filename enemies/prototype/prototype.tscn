@@ -5,7 +5,7 @@
 [ext_resource type="Script" path="res://nodes/hitbox.gd" id="3_0mdhq"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_ue5ft"]
-size = Vector2(32, 32)
+size = Vector2(16, 16)
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_oxhrn"]
 radius = 1024.0
@@ -32,7 +32,7 @@ scale_max = 16.0
 color_ramp = SubResource("GradientTexture1D_divnc")
 color_initial_ramp = SubResource("GradientTexture1D_lvipj")
 
-[node name="Prototype" type="Node2D" node_paths=PackedStringArray("targeting_area", "hitbox", "death_particles", "sprite")]
+[node name="Prototype" type="Node2D" node_paths=PackedStringArray("targeting_area", "hitbox", "death_particles", "sprite") groups=["alien"]]
 script = ExtResource("1_1kmhp")
 speed = 150.0
 targeting_area = NodePath("TargetingArea")
@@ -41,7 +41,7 @@ death_particles = NodePath("GPUParticles2D")
 sprite = NodePath("Sprite2D")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
-scale = Vector2(0.3, 0.3)
+scale = Vector2(0.1, 0.1)
 texture = ExtResource("1_5weto")
 
 [node name="TargetHitbox" type="Area2D" parent="."]
