@@ -1,58 +1,9 @@
-[gd_scene load_steps=11 format=3 uid="uid://dijshjxosqc6x"]
+[gd_scene load_steps=12 format=3 uid="uid://dijshjxosqc6x"]
 
 [ext_resource type="TileSet" uid="uid://bwl4rv2cly4yh" path="res://construction/playground_tile_set.tres" id="1_m81gj"]
+[ext_resource type="PackedScene" uid="uid://ckwb7gqwf0w3" path="res://enemy_spawner.tscn" id="2_blxyo"]
 [ext_resource type="PackedScene" uid="uid://bolr8ahq4o4jp" path="res://construction/ui/option_ui.tscn" id="2_qxoeo"]
 [ext_resource type="Texture2D" uid="uid://suwde8c5jbx3" path="res://resources/interdimensional_intelligence/Documents.png" id="3_pwf7h"]
-
-[sub_resource type="GDScript" id="GDScript_pw4no"]
-resource_name = "enemy_spawner"
-script/source = "extends Node2D
-
-
-@export var player: Node
-@export var radius: float = 500
-@export var interval: float
-
-
-@onready var enemy: PackedScene = preload(\"res://enemies/normal/worm/worm.tscn\")
-@onready var elite: PackedScene = preload(\"res://enemies/elite/hydra/hydra.tscn\")
-
-
-func _ready():
-	increase_interval.call_deferred()
-	spawn_elite.call_deferred()
-	while true:
-		var d: Dictionary = player.constructed_buildings
-		if d.size() > 1:
-			spawn()
-		await get_tree().create_timer(interval).timeout
-
-
-func increase_interval():
-	while true:
-		await get_tree().create_timer(10).timeout
-		interval = clampf(interval - interval * 0.1, 0.5, interval)
-
-
-func spawn():
-	var e = enemy.instantiate()
-	add_child(e)
-	if e is Node2D:
-		var d = Vector2.RIGHT.rotated(deg_to_rad(randf() * 360.0))
-		e.global_position = global_position + d * radius
-
-
-func spawn_elite():
-	while true:
-		await get_tree().create_timer(interval * 5.0).timeout
-		var cb: Dictionary = player.constructed_buildings
-		if cb.size() <= 1:
-			continue
-		var e = elite.instantiate() as Node2D
-		add_child(e)
-		var d = Vector2.RIGHT.rotated(deg_to_rad(randf() * 360.0))
-		e.global_position = global_position + d * radius
-"
 
 [sub_resource type="GDScript" id="GDScript_2poc1"]
 resource_name = "player"
@@ -99,29 +50,31 @@ func _ready():
 	headquarters_coords = tile_map.local_to_map(hc)
 
 
+func _is_submit(event: InputEvent) -> Vector2:
+	if event is InputEventMouseButton and event.is_released():
+		return tile_map.get_global_mouse_position()
+	elif event is InputEventScreenTouch:
+		return event.position
+	else: return Vector2.ZERO
+
+
+func _select(pos: Vector2):
+	var p = tile_map.local_to_map(tile_map.to_local(pos))
+	if p == headquarters_coords: return
+	clear_selection()
+	hide_option_ui()
+	if not is_ground_cell(p): return
+	select_cell(p)
+	if get_building(p):
+		show_building_ui()
+	else:
+		show_construction_ui()
+
+
 func _unhandled_input(event):
-	if event.is_action_pressed(\"select\"):
-		clear_selection()
-		hide_option_ui()
-		var clls: Array[Vector2i] = tile_map.get_used_cells(3)
-		if clls.size() > 0:
-			var p = clls[0]
-			if p != headquarters_coords:
-				# Is the pressed cell a ground cell
-				if is_ground_cell(p):
-					select_cell(p)
-					if get_building(p):
-						show_building_ui()
-					else: show_construction_ui()
-	elif event is InputEventMouseMotion:
-		tile_map.clear_layer(3)
-		var p = tile_map.local_to_map(tile_map.get_local_mouse_position())
-		# Avoid selecting the headquarters
-		if p != headquarters_coords:
-			var uc = tile_map.get_used_cells(1)
-			if uc.has(p):
-				if p != selected_tile:
-					tile_map.set_cell(3, p, 2, Vector2i(0, 0))
+	var pos = _is_submit(event)
+	if pos:
+		_select(pos)
 
 
 func _physics_process(_delta):
@@ -159,7 +112,7 @@ func _on_building_deconstructed(coords: Vector2i):
 
 func build(coords: Vector2i, building: PackedScene):
 	var b: Building = building.instantiate() as Building
-	tile_map.add_child(b)
+	tile_map.add_child(b, true)
 	var p = tile_map.map_to_local(coords)
 	p = tile_map.to_global(p)
 	b.global_position = p + Vector2(0, -3)
@@ -194,6 +147,11 @@ func clear_selection():
 
 func is_ground_cell(coords: Vector2i) -> bool:
 	return tile_map.get_used_cells(1).has(coords)
+
+
+func notify_war():
+	var i: Node = get_tree().get_first_node_in_group(\"intro_ui\")
+	i.display(\"Resume\", \"Deciphered Message\", \"Alien Commander - \\n This means all out war!\")
 
 
 func select_cell(coords: Vector2i):
@@ -341,6 +299,9 @@ func _ready():
 func _on_start_button_pressed():
 	var i = get_tree().get_first_node_in_group(\"intro_ui\") as Control
 	i.hide()
+	#var s: PackedScene = load(\"res://enemy_spawner.tscn\") as PackedScene
+	#var a: Node2D = s.instantiate() as Node2D
+	#add_sibling(a)
 "
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_2j15p"]
@@ -350,6 +311,29 @@ bg_color = Color(0, 0, 0, 0.752941)
 font_size = 32
 
 [sub_resource type="LabelSettings" id="LabelSettings_8ytyf"]
+
+[sub_resource type="GDScript" id="GDScript_5fvc5"]
+resource_name = "intro"
+script/source = "extends Control
+
+
+@export var _title: Label
+@export var _description: Label
+@export var _button: Button
+
+
+func display(button_text: String, title: String = \"\", description: String = \"\"):
+	if title:
+		_title.text = title
+	else: _title.hide()
+	if description:
+		_description.text = description
+	else: _description.hide()
+	_button.text = button_text
+	show()
+	await _button.pressed
+	hide()
+"
 
 [node name="Playground" type="Node2D"]
 
@@ -370,13 +354,9 @@ layer_4/tile_data = PackedInt32Array()
 
 [node name="ProjectileHolder" type="Node" parent="." groups=["projectile_holder"]]
 
-[node name="EnemySpawner" type="Node2D" parent="." node_paths=PackedStringArray("player")]
-script = SubResource("GDScript_pw4no")
-player = NodePath("../Player")
-radius = 250.0
-interval = 2.0
+[node name="EnemySpawner" parent="." instance=ExtResource("2_blxyo")]
 
-[node name="Player" type="Node" parent="." node_paths=PackedStringArray("option_ui", "ii_count")]
+[node name="Player" type="Node" parent="." node_paths=PackedStringArray("option_ui", "ii_count") groups=["player"]]
 script = SubResource("GDScript_2poc1")
 option_ui = NodePath("HUD/Control/MarginContainer/OptionUI")
 ii_count = NodePath("HUD/Control/MarginContainer/InterdimensionalIntelligence/Count")
@@ -497,13 +477,18 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 32
 text = "Restart"
 
-[node name="Intro" type="Control" parent="Player/HUD/Control" groups=["intro_ui"]]
+[node name="Intro" type="Control" parent="Player/HUD/Control" node_paths=PackedStringArray("_title", "_description", "_button") groups=["intro_ui"]]
+process_mode = 3
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+script = SubResource("GDScript_5fvc5")
+_title = NodePath("PanelContainer/MarginContainer/VBoxContainer/Title")
+_description = NodePath("PanelContainer/MarginContainer/VBoxContainer/Description")
+_button = NodePath("PanelContainer/MarginContainer/VBoxContainer/Button")
 
 [node name="Panel" type="Panel" parent="Player/HUD/Control/Intro"]
 layout_mode = 1

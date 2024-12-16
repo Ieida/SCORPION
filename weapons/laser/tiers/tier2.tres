@@ -8,6 +8,8 @@ script = ExtResource("2_kawus")
 health = 100.0
 damage = 100.0
 rate_of_fire = 60.0
+speed = 0.0
+attack_range = 0.0
 
 [resource]
 script = ExtResource("1_jyxkk")

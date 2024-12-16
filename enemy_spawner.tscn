@@ -1,0 +1,69 @@
+[gd_scene load_steps=2 format=3 uid="uid://ckwb7gqwf0w3"]
+
+[sub_resource type="GDScript" id="GDScript_pw4no"]
+resource_name = "enemy_spawner"
+script/source = "extends Node2D
+
+
+@export var radius: float = 500
+@export var interval: float
+
+
+@onready var player: Node = get_tree().get_first_node_in_group(\"player\")
+@onready var enemy: PackedScene = preload(\"res://enemies/normal/worm/worm.tscn\")
+@onready var elite: PackedScene = preload(\"res://enemies/elite/hydra/hydra.tscn\")
+
+
+func _ready():
+	while player.constructed_buildings.size() < 2:
+		await get_tree().process_frame
+	increase_interval.call_deferred()
+	spawn_elite.call_deferred()
+	while player.constructed_buildings.size() > 0:
+		await get_tree().create_timer(interval).timeout
+		for i in 2:
+			spawn()
+
+
+func get_tiers() -> int:
+	var t: int = 0
+	for c in player.constructed_buildings:
+		var b: Building = player.constructed_buildings[c]
+		t += b._current_tier_index
+	return t
+
+
+func increase_interval():
+	while true:
+		await get_tree().create_timer(10).timeout
+		var i = interval
+		interval = 10.0 / ((4.0 + float(player.constructed_buildings.size())) * float(get_tiers()))
+		if i > 0.4 and interval < 0.4:
+			player.notify_war()
+
+
+func spawn():
+	var e = enemy.instantiate()
+	add_child(e)
+	if e is Node2D:
+		var d = Vector2.RIGHT.rotated(deg_to_rad(randf() * 360.0))
+		e.global_position = global_position + d * radius
+
+
+func spawn_elite():
+	while player.constructed_buildings.size() > 0:
+		var t = 60.0 / (float(player.constructed_buildings.size()) * float(get_tiers()))
+		await get_tree().create_timer(60.0 / float(player.constructed_buildings.size())).timeout
+		var cb: Dictionary = player.constructed_buildings
+		if cb.size() <= 0:
+			continue
+		var e = elite.instantiate() as Node2D
+		add_child(e)
+		var d = Vector2.RIGHT.rotated(deg_to_rad(randf() * 360.0))
+		e.global_position = global_position + d * radius
+"
+
+[node name="EnemySpawner" type="Node2D"]
+script = SubResource("GDScript_pw4no")
+radius = 250.0
+interval = 2.0

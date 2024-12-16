@@ -11,12 +11,17 @@ config_version=5
 [application]
 
 config/name="SCORPION"
+run/main_scene="res://construction/playground.tscn"
 config/features=PackedStringArray("4.2", "GL Compatibility")
 config/icon="res://icon.svg"
 
 [autoload]
 
 Helper="*res://helper.gd"
+
+[editor]
+
+export/convert_text_resources_to_binary=false
 
 [input]
 

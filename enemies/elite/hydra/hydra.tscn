@@ -14,23 +14,6 @@ rate_of_fire = 60.0
 speed = 100.0
 attack_range = 20.0
 
-[sub_resource type="Animation" id="Animation_p81ne"]
-resource_name = "move"
-length = 0.2
-loop_mode = 1
-tracks/0/type = "value"
-tracks/0/imported = false
-tracks/0/enabled = true
-tracks/0/path = NodePath(".:frame")
-tracks/0/interp = 1
-tracks/0/loop_wrap = true
-tracks/0/keys = {
-"times": PackedFloat32Array(0, 0.1),
-"transitions": PackedFloat32Array(1, 1),
-"update": 1,
-"values": [0, 1]
-}
-
 [sub_resource type="Animation" id="Animation_7nydo"]
 length = 0.001
 tracks/0/type = "value"
@@ -56,6 +39,23 @@ tracks/1/keys = {
 "transitions": PackedFloat32Array(1),
 "update": 0,
 "values": [Color(1, 1, 1, 1)]
+}
+
+[sub_resource type="Animation" id="Animation_p81ne"]
+resource_name = "move"
+length = 0.2
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath(".:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.1),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [0, 1]
 }
 
 [sub_resource type="Animation" id="Animation_btoav"]
@@ -87,7 +87,7 @@ _data = {
 radius = 1000.0
 
 [sub_resource type="Gradient" id="Gradient_qv2ls"]
-colors = PackedColorArray(0.321569, 0.129412, 0.321569, 1, 0.807843, 0.54902, 0.352941, 1)
+colors = PackedColorArray(0.419608, 0.290196, 0.419608, 1, 0.807843, 0.54902, 0.352941, 1)
 
 [sub_resource type="GradientTexture1D" id="GradientTexture1D_pqu0l"]
 gradient = SubResource("Gradient_qv2ls")
